@@ -1,0 +1,87 @@
+[1/10] Performing build step for 'bootloader'
+[1/1] cd /home/ilya/esp/ESP32/projects/sandbox/um1/build/bootloader/esp-idf/esptool_py && /root/.espressif/python_env/idf5.2_py3.12_env/bin/python /home/ilya/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x1000 /home/ilya/esp/ESP32/projects/sandbox/um1/build/bootloader/bootloader.bin
+Bootloader binary size 0x6860 bytes. 0x7a0 bytes (7%) free.
+[2/8] Building C object esp-idf/main/CMakeFiles/__idf_main.dir/main.c.obj
+/home/ilya/esp/ESP32/projects/sandbox/um1/main/main.c: In function 'app_main':
+/home/ilya/esp/ESP32/projects/sandbox/um1/main/main.c:27:19: warning: unused variable 'net_to_uart' [-Wunused-variable]
+   27 |     QueueHandle_t net_to_uart = xQueueCreate(512, sizeof(uint8_t));
+      |                   ^~~~~~~~~~~
+/home/ilya/esp/ESP32/projects/sandbox/um1/main/main.c:26:19: warning: unused variable 'uart_to_net' [-Wunused-variable]
+   26 |     QueueHandle_t uart_to_net = xQueueCreate(512, sizeof(uint8_t));
+      |                   ^~~~~~~~~~~
+[3/8] Linking C static library esp-idf/main/libmain.a
+[4/8] Generating ld/sections.ld
+[5/8] Linking CXX executable app-template.elf
+[6/8] Generating binary image from built executable
+esptool.py v4.8.1
+Creating esp32 image...
+Merged 2 ELF sections
+Successfully created esp32 image.
+Generated /home/ilya/esp/ESP32/projects/sandbox/um1/build/app-template.bin
+[7/8] cd /home/ilya/esp/ESP32/projects/sandbox/um1/build/esp-idf/esptool_py && /root/.espressif/python_env/idf5.2_py3.12_env/bin/python /home/ilya/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /home/ilya/esp/ESP32/projects/sandbox/um1/build/partition_table/partition-table.bin /home/ilya/esp/ESP32/projects/sandbox/um1/build/app-template.bin
+app-template.bin binary size 0xc7200 bytes. Smallest app partition is 0x100000 bytes. 0x38e00 bytes (22%) free.
+[7/8] cd /home/ilya/esp/esp-idf/components/esptool_py && /root/.espressif/tools/cmake/3.24.0/bin/cmake -D IDF_PATH=/home/ilya/esp/esp-idf -D "SERIAL_TOOL=/root/.espressif/python_env/idf5.2_py3.12_env/bin/python;;/home/ilya/esp/esp-idf/components/esptool_py/esptool/esptool.py;--chip;esp32" -D "SERIAL_TOOL_ARGS=--before=default_reset;--after=hard_reset;write_flash;@flash_args" -D WORKING_DIRECTORY=/home/ilya/esp/ESP32/projects/sandbox/um1/build -P /home/ilya/esp/esp-idf/components/esptool_py/run_serial_tool.cmake
+esptool.py --chip esp32 -p /dev/ttyUSB2 -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode dio --flash_freq 40m --flash_size 2MB 0x1000 bootloader/bootloader.bin 0x10000 app-template.bin 0x8000 partition_table/partition-table.bin
+esptool.py v4.8.1
+Serial port /dev/ttyUSB2
+Connecting.....
+Chip is ESP32-D0WD-V3 (revision v3.1)
+Features: WiFi, BT, Dual Core, 240MHz, VRef calibration in efuse, Coding Scheme None
+Crystal is 40MHz
+MAC: 08:b6:1f:b9:e7:80
+Uploading stub...
+Running stub...
+Stub running...
+Changing baud rate to 460800
+Changed.
+Configuring flash size...
+Flash will be erased from 0x00001000 to 0x00007fff...
+Flash will be erased from 0x00010000 to 0x000d7fff...
+Flash will be erased from 0x00008000 to 0x00008fff...
+SHA digest in image updated
+Compressed 26720 bytes to 16346...
+Writing at 0x00001000... (100 %)
+Wrote 26720 bytes (16346 compressed) at 0x00001000 in 0.8 seconds (effective 265.3 kbit/s)...
+Hash of data verified.
+Compressed 815616 bytes to 512513...
+Writing at 0x00010000... (3 %)
+Writing at 0x0001dc47... (6 %)
+Writing at 0x00026604... (9 %)
+Writing at 0x0002b4c8... (12 %)
+Writing at 0x00035c82... (15 %)
+Writing at 0x0003c1c4... (18 %)
+Writing at 0x00041ed0... (21 %)
+Writing at 0x0004768b... (25 %)
+Writing at 0x0004d480... (28 %)
+Writing at 0x00052b12... (31 %)
+Writing at 0x00058778... (34 %)
+Writing at 0x0005e533... (37 %)
+Writing at 0x00063fb6... (40 %)
+Writing at 0x0006a1be... (43 %)
+Writing at 0x0006fe80... (46 %)
+Writing at 0x00076270... (50 %)
+Writing at 0x0007b54b... (53 %)
+Writing at 0x000809a2... (56 %)
+Writing at 0x00085ecc... (59 %)
+Writing at 0x0008b248... (62 %)
+Writing at 0x00090907... (65 %)
+Writing at 0x000960ef... (68 %)
+Writing at 0x0009c28b... (71 %)
+Writing at 0x000a1ad8... (75 %)
+Writing at 0x000a7859... (78 %)
+Writing at 0x000ad1eb... (81 %)
+Writing at 0x000b2b60... (84 %)
+Writing at 0x000bcbaf... (87 %)
+Writing at 0x000c425f... (90 %)
+Writing at 0x000c9faa... (93 %)
+Writing at 0x000d0321... (96 %)
+Writing at 0x000d55ef... (100 %)
+Wrote 815616 bytes (512513 compressed) at 0x00010000 in 12.4 seconds (effective 525.8 kbit/s)...
+Hash of data verified.
+Compressed 3072 bytes to 103...
+Writing at 0x00008000... (100 %)
+Wrote 3072 bytes (103 compressed) at 0x00008000 in 0.0 seconds (effective 560.5 kbit/s)...
+Hash of data verified.
+
+Leaving...
+Hard resetting via RTS pin...
