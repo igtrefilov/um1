@@ -1,4 +1,4 @@
-# Install script for directory: /home/ilya/esp/ESP32/projects/sandbox/um1/components/um1_lan
+# Install script for directory: /home/ilya/esp/ESP32/projects/work/um1/components/um1_lan
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

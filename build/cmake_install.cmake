@@ -1,4 +1,4 @@
-# Install script for directory: /home/ilya/esp/ESP32/projects/sandbox/um1
+# Install script for directory: /home/ilya/esp/ESP32/projects/work/um1
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -39,7 +39,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/home/ilya/esp/ESP32/projects/sandbox/um1/build/esp-idf/cmake_install.cmake")
+  include("/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/cmake_install.cmake")
 
 endif()
 
@@ -51,5 +51,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/ilya/esp/ESP32/projects/sandbox/um1/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/ilya/esp/ESP32/projects/work/um1/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

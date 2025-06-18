@@ -371,7 +371,7 @@ CONFIG_PARTITION_TABLE_MD5=y
 # end of Partition Table
 
 #
-# Ethernet Configuration
+# Ethernet PHY Configuration
 #
 CONFIG_ENV_GPIO_RANGE_MIN=0
 CONFIG_ENV_GPIO_RANGE_MAX=39
@@ -388,7 +388,7 @@ CONFIG_EXAMPLE_ETH_MDIO_GPIO=18
 CONFIG_EXAMPLE_ETH_PHY_RST_GPIO=-1
 CONFIG_EXAMPLE_ETH_PHY_ADDR=1
 # CONFIG_EXAMPLE_USE_SPI_ETHERNET is not set
-# end of Ethernet Configuration
+# end of Ethernet PHY Configuration
 
 #
 # WIFI AP Configuration
