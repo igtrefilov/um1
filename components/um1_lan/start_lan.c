@@ -13,10 +13,9 @@
 #include "sdkconfig.h"
 
 #include "start_lan.h"
+#include "um1_lan.h"
 
 static const char *TAG = "eth_if";
-#define TCP_PORT  3333
-#define LISTEN_BACKLOG 5
 
 /** Event handler for Ethernet events */
 static void eth_event_handler(void *arg, esp_event_base_t event_base,
@@ -47,7 +46,7 @@ static void eth_event_handler(void *arg, esp_event_base_t event_base,
     }
 }
 
-static void tcp_server_task(void *pvParameters)
+/*static void tcp_server_task(void *pvParameters)
 {
 	esp_netif_ip_info_t *ip_info = (esp_netif_ip_info_t *)pvParameters;
     int listen_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
@@ -103,9 +102,9 @@ static void tcp_server_task(void *pvParameters)
 
     close(listen_sock);
     vTaskDelete(NULL);
-}
+}*/
 
-/** Event handler for IP_EVENT_ETH_GOT_IP */
+/* Event handler for IP_EVENT_ETH_GOT_IP*/
 static void got_ip_event_handler(void *arg, esp_event_base_t event_base,
                                  int32_t event_id, void *event_data)
 {

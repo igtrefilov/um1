@@ -92,7 +92,7 @@ static const httpd_uri_t hello = {
     .handler   = hello_get_handler,
     /* Let's pass response string in user
      * context to demonstrate it's usage */
-    .user_ctx  = "Hello World, Man!"
+    .user_ctx  = "<b1 style='color: green;'>Hello World, Man!</b1>"
 };
 
 /* An HTTP POST handler */

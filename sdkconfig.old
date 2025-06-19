@@ -371,6 +371,12 @@ CONFIG_PARTITION_TABLE_MD5=y
 # end of Partition Table
 
 #
+# HTTP SERVER Configuration
+#
+# CONFIG_BASIC_AUTH is not set
+# end of HTTP SERVER Configuration
+
+#
 # Ethernet PHY Configuration
 #
 CONFIG_ENV_GPIO_RANGE_MIN=0
