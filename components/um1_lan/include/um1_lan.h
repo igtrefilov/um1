@@ -13,6 +13,7 @@
 #include "esp_log.h"
 
 #include "start_lan.h"
+#include "um1_spiffs.h"
 
 void handle_client(int client_sock);
 void tcp_server_task(void *pvParameters);

@@ -61,6 +61,7 @@ void handle_client(int client_sock) {
         return;
     }
     cmd[len] = '\0';
+    ESP_LOGI(TAG, "Received cmd: '%s'", cmd);
 
     if (strncmp(cmd, "TREE ", 5) == 0) {
         char dir[128];
@@ -149,8 +150,20 @@ void handle_client(int client_sock) {
             }
         }
 
-    } else {
-        send_text(client_sock, "UNKNOWN CMD\n");
+	}else if(strncmp(cmd, "FORMAT", 6) == 0){
+
+		esp_vfs_spiffs_unregister(NULL);
+		esp_err_t err = esp_spiffs_format(NULL);
+		start_spiffs();
+
+		if (err == ESP_OK) {
+			send_text(client_sock, "OK\n");
+		} else {
+			send_text(client_sock, "ERR: %s\n", esp_err_to_name(err));
+		}
+
+		} else {
+			send_text(client_sock, "UNKNOWN CMD\n");
     }
     close(client_sock);
 }

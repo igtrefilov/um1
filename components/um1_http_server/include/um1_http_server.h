@@ -10,6 +10,7 @@
 #include "esp_event.h"
 #include "esp_netif.h"
 #include "esp_tls.h"
+#include "esp_vfs.h"
 #include "protocol_examples_utils.h"
 
 httpd_handle_t start_webserver(void);

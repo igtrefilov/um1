@@ -1,9 +1,52 @@
 #include "um1_http_server.h"
 
 #define EXAMPLE_HTTP_QUERY_KEY_MAX_LEN  (64)
-
+#define UPLOAD_BUFFER_SIZE  1024
 
 static const char *TAG = "http_server";
+
+static esp_err_t spiffs_get_handler(httpd_req_t *req)
+{
+    char path[512];
+    const char *base_path = "/spiffs";
+
+    // Копируем базовый путь
+    strlcpy(path, base_path, sizeof(path));
+    // Добавляем URI
+    strlcat(path, req->uri, sizeof(path));
+    // Если URI оканчивается '/', то добавляем index.html
+    if (req->uri[strlen(req->uri) - 1] == '/') {
+        strlcat(path, "index.html", sizeof(path));
+    }
+
+    FILE *file = fopen(path, "r");
+    if (!file) {
+        ESP_LOGE(TAG, "File not found: %s", path);
+        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File not found");
+        return ESP_FAIL;
+    }
+
+    // Определяем MIME‑тип по расширению
+    const char *ext = strrchr(path, '.');
+    if (ext) {
+        if      (strcmp(ext, ".html") == 0) httpd_resp_set_type(req, "text/html");
+        else if (strcmp(ext, ".css")  == 0) httpd_resp_set_type(req, "text/css");
+        else if (strcmp(ext, ".js")   == 0) httpd_resp_set_type(req, "application/javascript");
+        else if (strcmp(ext, ".png")  == 0) httpd_resp_set_type(req, "image/png");
+        else if (strcmp(ext, ".jpg")  == 0) httpd_resp_set_type(req, "image/jpeg");
+        else                                 httpd_resp_set_type(req, "application/octet-stream");
+    }
+
+    // Шлём файл чанками
+    char chunk[128];
+    size_t len;
+    while ((len = fread(chunk, 1, sizeof(chunk), file)) > 0) {
+        httpd_resp_send_chunk(req, chunk, len);
+    }
+    fclose(file);
+    httpd_resp_send_chunk(req, NULL, 0);
+    return ESP_OK;
+}
 
 /* An HTTP GET handler */
 static esp_err_t hello_get_handler(httpd_req_t *req)
@@ -186,6 +229,57 @@ static esp_err_t ctrl_put_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static esp_err_t upload_post_handler(httpd_req_t *req)
+{
+    char filename[64];
+    FILE *f = NULL;
+    char buf[UPLOAD_BUFFER_SIZE];
+    int remaining = req->content_len;
+    int r;
+
+    // Получим имя файла из заголовка
+    char fname_header[56] = {0};
+    size_t hl = httpd_req_get_hdr_value_len(req, "X-FILENAME");
+    if (hl > 0 && hl < sizeof(fname_header)) {
+        httpd_req_get_hdr_value_str(req, "X-FILENAME", fname_header, hl + 1);
+        ESP_LOGI(TAG, "fname_header: %s", fname_header);
+
+        // Безопасно формируем путь к файлу
+        snprintf(filename, sizeof(filename), "/spiffs/%s", fname_header);
+
+    } else {
+        // если не передали — сохраняем под фиксированным именем
+        strcpy(filename, "/spiffs/upload.bin");
+    }
+    ESP_LOGI(TAG, "Filename: %s", filename);
+
+    // Открываем файл на запись (перезапись если есть)
+    f = fopen(filename, "wb");
+    if (!f) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to open file for writing");
+        return ESP_FAIL;
+    }
+
+    // Читаем тело запроса и пишем в файл
+    while (remaining > 0) {
+        int to_read = MIN(remaining, UPLOAD_BUFFER_SIZE);
+        r = httpd_req_recv(req, buf, to_read);
+        if (r <= 0) {
+            fclose(f);
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to receive file data");
+            return ESP_FAIL;
+        }
+        fwrite(buf, 1, r, f);
+        remaining -= r;
+    }
+    fclose(f);
+
+    // Ответ клиенту
+    httpd_resp_set_type(req, "text/plain");
+    httpd_resp_sendstr(req, "OK");
+    return ESP_OK;
+}
+
 static const httpd_uri_t ctrl = {
     .uri       = "/ctrl",
     .method    = HTTP_PUT,
@@ -193,10 +287,25 @@ static const httpd_uri_t ctrl = {
     .user_ctx  = NULL
 };
 
+static const httpd_uri_t upload = {
+    .uri       = "/upload",
+    .method    = HTTP_POST,
+    .handler   = upload_post_handler,
+    .user_ctx  = NULL
+};
+
+static const httpd_uri_t spiffs_uri = {
+    .uri       = "/*",               // ловим все GET‑запросы
+    .method    = HTTP_GET,
+    .handler   = spiffs_get_handler,
+    .user_ctx  = NULL
+};
+
 httpd_handle_t start_webserver(void)
 {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    config.uri_match_fn = httpd_uri_match_wildcard;
 
     config.lru_purge_enable = true;
 
@@ -208,6 +317,8 @@ httpd_handle_t start_webserver(void)
         httpd_register_uri_handler(server, &hello);
         httpd_register_uri_handler(server, &echo);
         httpd_register_uri_handler(server, &ctrl);
+        httpd_register_uri_handler(server, &upload);
+        httpd_register_uri_handler(server, &spiffs_uri);
 
         return server;
     }
@@ -220,11 +331,7 @@ static esp_err_t stop_webserver(httpd_handle_t server)
 {
     // Stop the httpd server
     return httpd_stop(server);
-}void func(void)
-{
-
 }
-
 
 void disconnect_handler(void* arg, esp_event_base_t event_base,
                                int32_t event_id, void* event_data)
