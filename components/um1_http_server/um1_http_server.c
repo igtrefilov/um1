@@ -1,105 +1,179 @@
 #include "um1_http_server.h"
 
-/* A simple example that demonstrates using websocket echo server
- */
-static const char *TAG = "ws_echo_server";
+#define MAX_SUBSCRIBERS 10
+#define UPLOAD_BUFFER_SIZE  1024
 
-/*
- * Structure holding server handle
- * and internal socket fd in order
- * to use out of request send
- */
-struct async_resp_arg {
-    httpd_handle_t hd;
-    int fd;
-};
+static int subscribers[MAX_SUBSCRIBERS];
+static size_t subs_count = 0;
 
-/*
- * async send function, which we put into the httpd work queue
- */
-static void ws_async_send(void *arg)
-{
-    static const char * data = "Async data";
-    struct async_resp_arg *resp_arg = arg;
-    httpd_handle_t hd = resp_arg->hd;
-    int fd = resp_arg->fd;
-    httpd_ws_frame_t ws_pkt;
-    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
-    ws_pkt.payload = (uint8_t*)data;
-    ws_pkt.len = strlen(data);
-    ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+static const char *TAG = "http_server";
 
-    httpd_ws_send_frame_async(hd, fd, &ws_pkt);
-    free(resp_arg);
+static void add_subscriber(int fd) {
+	if (subs_count < MAX_SUBSCRIBERS) {
+		subscribers[subs_count++] = fd;
+		ESP_LOGI(TAG, "Subscriber added, total = %d", subs_count);
+	}
 }
 
-static esp_err_t trigger_async_send(httpd_handle_t handle, httpd_req_t *req)
-{
-    struct async_resp_arg *resp_arg = malloc(sizeof(struct async_resp_arg));
-    if (resp_arg == NULL) {
-        return ESP_ERR_NO_MEM;
-    }
-    resp_arg->hd = req->handle;
-    resp_arg->fd = httpd_req_to_sockfd(req);
-    esp_err_t ret = httpd_queue_work(handle, ws_async_send, resp_arg);
-    if (ret != ESP_OK) {
-        free(resp_arg);
-    }
-    return ret;
+static void remove_subscriber(int fd) {
+	for (size_t i = 0; i < subs_count; ++i) {
+		if (subscribers[i] == fd) {
+			subscribers[i] = subscribers[--subs_count];
+			ESP_LOGI(TAG, "Subscriber removed, total = %d", subs_count);
+			break;
+		}
+	}
 }
 
-/*
- * This handler echos back the received ws data
- * and triggers an async send if certain message received
- */
-static esp_err_t echo_handler(httpd_req_t *req)
+static void stream_task(void *arg) {
+    httpd_handle_t hd = (httpd_handle_t)arg;
+    while (true) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        static int counter = 0;
+        char data[64];
+        int len = snprintf(data, sizeof(data), "Stream data #%d", counter++);
+        httpd_ws_frame_t ws_pkt = {
+            .payload = (uint8_t*)data,
+            .len     = len,
+            .type    = HTTPD_WS_TYPE_TEXT
+        };
+        for (size_t i = 0; i < subs_count; ++i) {
+            httpd_ws_send_frame_async(hd, subscribers[i], &ws_pkt);
+        }
+    }
+    vTaskDelete(NULL);
+}
+
+static esp_err_t upload_post_handler(httpd_req_t *req)
 {
+    char filename[64];
+    FILE *f = NULL;
+    char buf[UPLOAD_BUFFER_SIZE];
+    int remaining = req->content_len;
+    int r;
+
+    char fname_header[56] = {0};
+    size_t hl = httpd_req_get_hdr_value_len(req, "X-FILENAME");
+    if (hl > 0 && hl < sizeof(fname_header)) {
+        httpd_req_get_hdr_value_str(req, "X-FILENAME", fname_header, hl + 1);
+        ESP_LOGI(TAG, "fname_header: %s", fname_header);
+
+        snprintf(filename, sizeof(filename), "/spiffs/%s", fname_header);
+
+    } else {
+        strcpy(filename, "/spiffs/upload.bin");
+    }
+    ESP_LOGI(TAG, "Filename: %s", filename);
+
+    f = fopen(filename, "wb");
+    if (!f) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to open file for writing");
+        return ESP_FAIL;
+    }
+
+    while (remaining > 0) {
+        int to_read = MIN(remaining, UPLOAD_BUFFER_SIZE);
+        r = httpd_req_recv(req, buf, to_read);
+        if (r <= 0) {
+            fclose(f);
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to receive file data");
+            return ESP_FAIL;
+        }
+        fwrite(buf, 1, r, f);
+        remaining -= r;
+    }
+    fclose(f);
+
+    httpd_resp_set_type(req, "text/plain");
+    httpd_resp_sendstr(req, "OK");
+    return ESP_OK;
+}
+
+static esp_err_t spiffs_get_handler(httpd_req_t *req)
+{
+    char path[512];
+    const char *base_path = "/spiffs";
+
+    strlcpy(path, base_path, sizeof(path));
+    strlcat(path, req->uri, sizeof(path));
+    if (req->uri[strlen(req->uri) - 1] == '/') {
+        strlcat(path, "index.html", sizeof(path));
+    }
+
+    ESP_LOGI(TAG, "Open path: %s", path);
+    FILE *file = fopen(path, "r");
+    if (!file) {
+        ESP_LOGE(TAG, "File not found: %s", path);
+        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File not found");
+        return ESP_FAIL;
+    }
+
+    const char *ext = strrchr(path, '.');
+    if (ext) {
+        if      (strcmp(ext, ".html") == 0) httpd_resp_set_type(req, "text/html");
+        else if (strcmp(ext, ".css")  == 0) httpd_resp_set_type(req, "text/css");
+        else if (strcmp(ext, ".js")   == 0) httpd_resp_set_type(req, "application/javascript");
+        else if (strcmp(ext, ".png")  == 0) httpd_resp_set_type(req, "image/png");
+        else if (strcmp(ext, ".jpg")  == 0) httpd_resp_set_type(req, "image/jpeg");
+        else                                 httpd_resp_set_type(req, "application/octet-stream");
+    }
+
+    char chunk[128];
+    size_t len;
+    while ((len = fread(chunk, 1, sizeof(chunk), file)) > 0) {
+        httpd_resp_send_chunk(req, chunk, len);
+    }
+    fclose(file);
+    httpd_resp_send_chunk(req, NULL, 0);
+    return ESP_OK;
+}
+
+static esp_err_t echo_handler(httpd_req_t *req) {
     if (req->method == HTTP_GET) {
-        ESP_LOGI(TAG, "Handshake done, the new connection was opened");
+        ESP_LOGI(TAG, "WebSocket handshake");
         return ESP_OK;
     }
-    httpd_ws_frame_t ws_pkt;
-    uint8_t *buf = NULL;
-    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
-    ws_pkt.type = HTTPD_WS_TYPE_TEXT;
-    /* Set max_len = 0 to get the frame len */
-    esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "httpd_ws_recv_frame failed to get frame len with %d", ret);
-        return ret;
-    }
-    ESP_LOGI(TAG, "frame len is %d", ws_pkt.len);
-    if (ws_pkt.len) {
-        /* ws_pkt.len + 1 is for NULL termination as we are expecting a string */
-        buf = calloc(1, ws_pkt.len + 1);
-        if (buf == NULL) {
-            ESP_LOGE(TAG, "Failed to calloc memory for buf");
-            return ESP_ERR_NO_MEM;
-        }
-        ws_pkt.payload = buf;
-        /* Set max_len = ws_pkt.len to get the frame payload */
-        ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "httpd_ws_recv_frame failed with %d", ret);
-            free(buf);
-            return ret;
-        }
-        ESP_LOGI(TAG, "Got packet with message: %s", ws_pkt.payload);
-    }
-    ESP_LOGI(TAG, "Packet type: %d", ws_pkt.type);
-    if (ws_pkt.type == HTTPD_WS_TYPE_TEXT &&
-        strcmp((char*)ws_pkt.payload,"Trigger async") == 0) {
-        free(buf);
-        return trigger_async_send(req->handle, req);
-    }
 
-    ret = httpd_ws_send_frame(req, &ws_pkt);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "httpd_ws_send_frame failed with %d", ret);
+    httpd_ws_frame_t ws_pkt = { .type = HTTPD_WS_TYPE_TEXT };
+    esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
+    if (ret != ESP_OK) return ret;
+    if (ws_pkt.len == 0) return ESP_OK;
+
+    uint8_t *buf = calloc(1, ws_pkt.len + 1);
+    ws_pkt.payload = buf;
+    ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
+    if (ret != ESP_OK) { free(buf); return ret; }
+
+    ESP_LOGI(TAG, "Received message: %s", buf);
+    int fd = httpd_req_to_sockfd(req);
+
+    if (strcmp((char*)buf, "START_STREAM") == 0) {
+        add_subscriber(fd);
+        free(buf);
+        return ESP_OK;
+    } else if (strcmp((char*)buf, "STOP_STREAM") == 0) {
+        remove_subscriber(fd);
+        free(buf);
+        return ESP_OK;
     }
+    ret = httpd_ws_send_frame(req, &ws_pkt);
     free(buf);
     return ret;
 }
+
+static const httpd_uri_t upload = {
+    .uri       = "/upload",
+    .method    = HTTP_POST,
+    .handler   = upload_post_handler,
+    .user_ctx  = NULL
+};
+
+static const httpd_uri_t spiffs_uri = {
+    .uri       = "/*",
+    .method    = HTTP_GET,
+    .handler   = spiffs_get_handler,
+    .user_ctx  = NULL
+};
 
 static const httpd_uri_t ws = {
         .uri        = "/ws",
@@ -144,6 +218,8 @@ httpd_handle_t start_webserver(void)
 {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    config.uri_match_fn = httpd_uri_match_wildcard;
+    config.lru_purge_enable = true;
 
     // Start the httpd server
     ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
@@ -152,9 +228,14 @@ httpd_handle_t start_webserver(void)
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &disconnect_handler, &server));
 
     if (httpd_start(&server, &config) == ESP_OK) {
-        // Registering the ws handler
         ESP_LOGI(TAG, "Registering URI handlers");
+
         httpd_register_uri_handler(server, &ws);
+        httpd_register_uri_handler(server, &upload);
+        httpd_register_uri_handler(server, &spiffs_uri);
+
+
+        xTaskCreate(stream_task, "ws_stream_task", 4096, server, tskIDLE_PRIORITY + 1, NULL);
         return server;
     }
 
