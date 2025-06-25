@@ -642,13 +642,6 @@
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/main/CMakeFiles/install.dir
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/main/CMakeFiles/install/local.dir
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/main/CMakeFiles/install/strip.dir
-/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_http_server/CMakeFiles/__idf_um1_http_server.dir
-/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_http_server/CMakeFiles/edit_cache.dir
-/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_http_server/CMakeFiles/rebuild_cache.dir
-/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_http_server/CMakeFiles/list_install_components.dir
-/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_http_server/CMakeFiles/install.dir
-/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_http_server/CMakeFiles/install/local.dir
-/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_http_server/CMakeFiles/install/strip.dir
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_spiffs/CMakeFiles/__idf_um1_spiffs.dir
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_spiffs/CMakeFiles/edit_cache.dir
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_spiffs/CMakeFiles/rebuild_cache.dir
@@ -663,6 +656,13 @@
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_lan/CMakeFiles/install.dir
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_lan/CMakeFiles/install/local.dir
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_lan/CMakeFiles/install/strip.dir
+/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_http_server/CMakeFiles/__idf_um1_http_server.dir
+/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_http_server/CMakeFiles/edit_cache.dir
+/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_http_server/CMakeFiles/rebuild_cache.dir
+/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_http_server/CMakeFiles/list_install_components.dir
+/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_http_server/CMakeFiles/install.dir
+/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_http_server/CMakeFiles/install/local.dir
+/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_http_server/CMakeFiles/install/strip.dir
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_uart/CMakeFiles/__idf_um1_uart.dir
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_uart/CMakeFiles/edit_cache.dir
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_uart/CMakeFiles/rebuild_cache.dir
