@@ -21,6 +21,7 @@
 
 #include <nvs_flash.h>
 #include <sys/param.h>
+#include "cJSON.h"
 
 #include "protocol_examples_utils.h"
 

@@ -44,7 +44,40 @@ static void stream_task(void *arg) {
     vTaskDelete(NULL);
 }
 
-static esp_err_t upload_post_handler(httpd_req_t *req)
+esp_err_t checkbox_handler(httpd_req_t *req)
+{
+    char buf[512];
+    int total_len = req->content_len;
+    int cur_len = 0;
+    int received;
+
+    while (cur_len < total_len) {
+        received = httpd_req_recv(req, buf + cur_len, sizeof(buf) - cur_len);
+        if (received <= 0) return ESP_FAIL;
+        cur_len += received;
+    }
+    buf[cur_len] = '\0';
+
+    ESP_LOGI(TAG, "Received data: %s", buf);
+
+    // Пример разбора JSON с помощью cJSON
+    cJSON *root = cJSON_Parse(buf);
+    if (root) {
+        bool opt1 = cJSON_IsTrue(cJSON_GetObjectItem(root, "option1"));
+        bool opt2 = cJSON_IsTrue(cJSON_GetObjectItem(root, "option2"));
+        bool opt3 = cJSON_IsTrue(cJSON_GetObjectItem(root, "option3"));
+        bool opt4 = cJSON_IsTrue(cJSON_GetObjectItem(root, "option4"));
+        cJSON_Delete(root);
+
+        ESP_LOGI(TAG, "Options state: option1=%d, option2=%d, option3=%d, option4=%d",
+                     opt1, opt2, opt3, opt4);
+    }
+
+    httpd_resp_sendstr(req, "OK");
+    return ESP_OK;
+}
+
+static esp_err_t file_upload_handler(httpd_req_t *req)
 {
     char filename[64];
     FILE *f = NULL;
@@ -92,7 +125,7 @@ static esp_err_t upload_post_handler(httpd_req_t *req)
 static esp_err_t spiffs_get_handler(httpd_req_t *req)
 {
     char path[512];
-    const char *base_path = "/spiffs";
+    const char *base_path = "/spiffs/src";
 
     strlcpy(path, base_path, sizeof(path));
     strlcat(path, req->uri, sizeof(path));
@@ -161,10 +194,17 @@ static esp_err_t echo_handler(httpd_req_t *req) {
     return ret;
 }
 
+static const httpd_uri_t checkbox = {
+    .uri       = "/checkbox",
+    .method    = HTTP_POST,
+    .handler   = checkbox_handler,
+    .user_ctx  = NULL
+};
+
 static const httpd_uri_t upload = {
     .uri       = "/upload",
     .method    = HTTP_POST,
-    .handler   = upload_post_handler,
+    .handler   = file_upload_handler,
     .user_ctx  = NULL
 };
 
@@ -195,7 +235,6 @@ static void connect_handler(void* arg, esp_event_base_t event_base,
 
 esp_err_t stop_webserver(httpd_handle_t server)
 {
-    // Stop the httpd server
     return httpd_stop(server);
 }
 
@@ -231,9 +270,9 @@ httpd_handle_t start_webserver(void)
         ESP_LOGI(TAG, "Registering URI handlers");
 
         httpd_register_uri_handler(server, &ws);
+        httpd_register_uri_handler(server, &checkbox);
         httpd_register_uri_handler(server, &upload);
         httpd_register_uri_handler(server, &spiffs_uri);
-
 
         xTaskCreate(stream_task, "ws_stream_task", 4096, server, tskIDLE_PRIORITY + 1, NULL);
         return server;

@@ -1,5 +1,9 @@
 #include "um1_lan.h"
 
+#include <sys/stat.h>
+#include <dirent.h>
+#include <unistd.h>
+
 #define TCP_PORT  3333
 #define LISTEN_BACKLOG 5
 
@@ -27,7 +31,6 @@ static void send_text(int sock, const char *fmt, ...) {
     }
 }
 
-// Recursively list directory tree
 static void tree_dir(const char *path, int sock, int level) {
     DIR *d = opendir(path);
     if (!d) {
@@ -40,7 +43,6 @@ static void tree_dir(const char *path, int sock, int level) {
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
         for (int i = 0; i < level; i++) send(sock, "  ", 2, 0);
         send_text(sock, "%s\n", entry->d_name);
-        // path build
         strlcpy(fullpath, path, sizeof(fullpath));
         strlcat(fullpath, "/", sizeof(fullpath));
         strlcat(fullpath, entry->d_name, sizeof(fullpath));
@@ -52,6 +54,28 @@ static void tree_dir(const char *path, int sock, int level) {
     closedir(d);
 }
 
+static void rmdir_recursive(const char *base_path, int sock) {
+    DIR *d = opendir(base_path);
+    if (!d) {
+        send_text(sock, "ERR: cannot open %s\n", base_path);
+        return;
+    }
+    struct dirent *entry;
+    char fullpath[1024];
+    struct stat st;
+    while ((entry = readdir(d)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 ||
+            strcmp(entry->d_name, "..") == 0) continue;
+        snprintf(fullpath, sizeof(fullpath), "%s/%s", base_path, entry->d_name);
+        if (stat(fullpath, &st) == 0 && S_ISDIR(st.st_mode)) {
+            rmdir_recursive(fullpath, sock);
+        } else {
+            unlink(fullpath);
+        }
+    }
+    closedir(d);
+    rmdir(base_path);
+}
 
 void handle_client(int client_sock) {
     char cmd[CMD_BUF_SZ];
@@ -93,6 +117,17 @@ void handle_client(int client_sock) {
             if (mkdir(path, 0755) == 0) send_text(client_sock, "OK\n");
             else send_text(client_sock, "ERR\n");
         }
+
+    }	else if (strncmp(cmd, "RMDIR ", 6) == 0) {
+			char path[128];
+			if (sscanf(cmd + 6, "%127s", path) == 1) {
+				ESP_LOGI(TAG, "RMDIR %s", path);
+				// Рекурсивная функция
+				extern void rmdir_recursive(const char *path, int sock);
+				rmdir_recursive(path, client_sock);
+				send_text(client_sock, "OK\n");
+			}
+
 
     } else if (strncmp(cmd, "DEL ", 4) == 0) {
         char path[128];
