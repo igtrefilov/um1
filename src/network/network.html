@@ -3,55 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <title>УМ1 сеть</title> 
-  <style>
-	body {
-	margin: 0;
-	height: 100vh;
-	font-family: sans-serif;
-	display: flex;
-	}
-
-	.sidebar {
-	width: 10%; 
-	background-color: #000;
-	color: white;
-	padding: 20px;
-	box-sizing: border-box;
-	}
-
-	.content {
-	flex: 1;
-	background-color: #e0f7ff;
-	padding: 20px;
-	box-sizing: border-box;
-	}
-
-	.menu-item {
-	margin-bottom: 15px;
-	cursor: pointer;
-	}
-
-	.menu-item:hover {
-	text-decoration: underline;
-	}
-
-	.menu-item a {
-	  color: white;
-	  text-decoration: none;
-	}
-  </style>
+  <link rel="stylesheet" href="../um1_main.css">
 </head>
 <body>
-	<div class="sidebar">
-		<div class="menu-item"><a href="../index.html" >Главная</a></div>
-		<div class="menu-item"><a href="../settings/settings.html" >Настройки</a></div>
-		<div class="menu-item"><a href="../network/network.html" >Сеть</a></div>
-		<div class="menu-item"><a href="../update/update.html" >Обновления</a></div>
-		<div class="menu-item"><a href="../about/about.html" >О системе</a></div>	
-	  </div>
+	<div class="sidebar" id="sidebar"></div>
 	<div class="content">
 		<p>Информация о состоянии сети</p>
 	</div>
 	<script src="network.js"></script>
+	<script>loadSidebar();</script>
 </body>
 </html>

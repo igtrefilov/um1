@@ -15,6 +15,15 @@ function log(msg) {
 	logDiv.scrollTop = logDiv.scrollHeight;
 }
 
+function loadSidebar(){
+	fetch('/sidebar.html')
+	      .then(resp => resp.text())
+	      .then(html => {
+		document.getElementById('sidebar').innerHTML = html;
+	      })
+	      .catch(err => console.error('Failed to load sidebar:', err));
+}
+
 function startStream() {
 	ws.send("START_STREAM");
 	log("📤 Sent: START_STREAM");
@@ -31,6 +40,19 @@ function sendMessage() {
 	ws.send(text);
 	log("📤 Sent: " + text);
 	}
+}
+
+function sendReboot() {
+  fetch('/reboot')
+    .then(resp => resp.text())
+    .then(text => {
+      console.log('Server response:', text);
+      alert(text);
+    })
+    .catch(err => {
+      console.error('Reboot request failed:', err);
+      alert('Failed to send reboot command');
+    });
 }
 
 document.addEventListener("DOMContentLoaded", start_socket);

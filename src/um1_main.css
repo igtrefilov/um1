@@ -1,0 +1,14 @@
+.sidebar {
+		width: 10%; 
+		background-color: #000;
+		color: white;
+		padding: 20px;
+		box-sizing: border-box;
+		}
+
+.content {
+flex: 1;
+background-color: #e0f7ff;
+padding: 20px;
+box-sizing: border-box;
+}
