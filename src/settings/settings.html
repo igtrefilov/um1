@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>УМ1-настройки</title> 
+  <style>
+	body {
+	margin: 0;
+	height: 100vh;
+	font-family: sans-serif;
+	display: flex;
+	}
+
+	.sidebar {
+	width: 10%; 
+	background-color: #000;
+	color: white;
+	padding: 20px;
+	box-sizing: border-box;
+	}
+
+	.content {
+	flex: 1;
+	background-color: #e0f7ff;
+	padding: 20px;
+	box-sizing: border-box;
+	}
+
+	.menu-item {
+	margin-bottom: 15px;
+	cursor: pointer;
+	}
+
+	.menu-item:hover {
+	text-decoration: underline;
+	}
+
+	.menu-item a {
+	  color: white;
+	  text-decoration: none;
+	}
+  </style>
+</head>
+<body>
+	<div class="sidebar">
+		<div class="menu-item"><a href="../index.html" >Главная</a></div>
+		<div class="menu-item"><a href="settings.html" >Настройки</a></div>
+		<div class="menu-item"><a href="../network/network.html" >Сеть</a></div>
+		<div class="menu-item"><a href="../update/update.html" >Обновление</a></div>
+		<div class="menu-item"><a href="../about/about.html" >О системе</a></div>	
+	  </div>
+	<div class="content">
+		<h2>Модуль УМ1</h2>
+		<label><input type="checkbox" id="option1"> Опция 1</label><br>
+		<label><input type="checkbox" id="option2"> Опция 2</label><br>
+		<label><input type="checkbox" id="option3"> Опция 3</label><br>
+		<label><input type="checkbox" id="option4"> Опция 4</label><br>
+		<button onclick="sendOptions()">Отправить опции на сервер</button>
+	</div>
+	<script src="settings.js"></script>
+</body>
+</html>
