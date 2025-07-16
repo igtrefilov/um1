@@ -26,9 +26,30 @@ function toggleLanFields() {
   });
 }
 
+function toggleWifiFields() {
+  const wifiEnabled = document.getElementById('wifi_enabled').checked;
+  const wifiFields = [
+    'wifi_ssid',
+    'wifi_password'
+  ];
+
+  wifiFields.forEach(id => {
+    const el = document.getElementById(id);
+    el.disabled = !wifiEnabled;
+    if (!wifiEnabled) {
+      el.classList.add('disabled-field');
+    } else {
+      el.classList.remove('disabled-field');
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('lan_dhcp').addEventListener('change', toggleLanFields);
   toggleLanFields();
+  
+  document.getElementById('wifi_enabled').addEventListener('change', toggleWifiFields);
+  toggleWifiFields();
 });
 
 function showNotification(message, isError = false) {
@@ -79,4 +100,33 @@ function collectSettings() {
     console.error('Ошибка:', err);
     showNotification('❌ Ошибка соединения с сервером', true);
   });
+}
+
+async function loadConfigFromServer() {
+    try {
+        const response = await fetch('/api/config');
+        const config = await response.json();
+
+        document.getElementById("lan_dhcp").checked = config.lan.dhcp;
+        document.getElementById("lan_static_ip").value = config.lan.static_ip;
+        document.getElementById("lan_subnet").value = config.lan.subnet;
+        document.getElementById("lan_gateway").value = config.lan.gateway;
+        document.getElementById("lan_mode").value = config.lan.mode;
+
+        document.getElementById("wifi_enabled").checked = config.wifi.enabled;
+        document.getElementById("wifi_ssid").value = config.wifi.ssid;
+        document.getElementById("wifi_password").value = config.wifi.password;
+
+        document.getElementById("uart_baudrate").value = config.uart.baudrate;
+        document.getElementById("uart_parity").value = config.uart.parity;
+        document.getElementById("uart_stop_bits").value = config.uart.stop_bits;
+
+        toggleLanFields();
+        toggleWifiFields();
+
+    } catch (err) {
+        console.error("Failed to load config:", err);
+        document.getElementById("notif").innerText = "Ошибка загрузки настроек";
+        document.getElementById("notif").style.display = "block";
+    }
 }
