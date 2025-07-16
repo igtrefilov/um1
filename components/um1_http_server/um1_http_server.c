@@ -44,6 +44,35 @@ static void stream_task(void *arg) {
     vTaskDelete(NULL);
 }
 
+esp_err_t handle_get_config(httpd_req_t *req)
+{
+    FILE *fp = fopen("/spiffs/src/config.json", "r");
+    if (!fp) {
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    size_t file_size = ftell(fp);
+    rewind(fp);
+
+    char *buf = malloc(file_size + 1);
+    if (!buf) {
+        fclose(fp);
+        httpd_resp_send_500(req);
+        return ESP_FAIL;
+    }
+
+    fread(buf, 1, file_size, fp);
+    buf[file_size] = '\0';
+    fclose(fp);
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_send(req, buf, file_size);
+    free(buf);
+    return ESP_OK;
+}
+
 static esp_err_t config_save_handler(httpd_req_t *req)
 {
     char buf[1024];
@@ -253,6 +282,13 @@ static esp_err_t reboot_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+httpd_uri_t config_get_uri = {
+    .uri      = "/api/config",
+    .method   = HTTP_GET,
+    .handler  = handle_get_config,
+    .user_ctx = NULL
+};
+
 static const httpd_uri_t config_save = {
     .uri       = "/config",
     .method    = HTTP_POST,
@@ -343,6 +379,7 @@ httpd_handle_t start_webserver(void)
         ESP_LOGI(TAG, "Registering URI handlers");
 
         httpd_register_uri_handler(server, &ws);
+        httpd_register_uri_handler(server, &config_get_uri);
         httpd_register_uri_handler(server, &config_save);
         httpd_register_uri_handler(server, &upload);
         httpd_register_uri_handler(server, &update);

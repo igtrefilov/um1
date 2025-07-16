@@ -14,6 +14,7 @@
 
 #include "start_lan.h"
 #include "um1_lan.h"
+#include "um1_config.h"
 
 static const char *TAG = "eth_if";
 
@@ -71,22 +72,34 @@ static void got_ip_event_handler(void *arg, esp_event_base_t event_base,
 
 void start_lan(void)
 {
+    ESP_LOGI(TAG, "Starting LAN with %s IP mode", global_lan_config.dhcp ? "DHCP" : "Static");
+
     // Initialize Ethernet driver
     uint8_t eth_port_cnt = 0;
     esp_eth_handle_t *eth_handles;
     ESP_ERROR_CHECK(example_eth_init(&eth_handles, &eth_port_cnt));
 
-    // Create instance(s) of esp-netif for Ethernet(s)
+    bool use_static_ip = !global_lan_config.dhcp;
+    esp_netif_ip_info_t ip_info;
+
+    if (use_static_ip) {
+        memset(&ip_info, 0, sizeof(ip_info));
+        ip_info.ip.addr = inet_addr(global_lan_config.static_ip);
+        ip_info.netmask.addr = inet_addr(global_lan_config.subnet);
+        ip_info.gw.addr = inet_addr(global_lan_config.gateway);
+    }
+
     if (eth_port_cnt == 1) {
-        // Use ESP_NETIF_DEFAULT_ETH when just one Ethernet interface is used and you don't need to modify
-        // default esp-netif configuration parameters.
         esp_netif_config_t cfg = ESP_NETIF_DEFAULT_ETH();
         esp_netif_t *eth_netif = esp_netif_new(&cfg);
-        // Attach Ethernet driver to TCP/IP stack
+
+        if (use_static_ip) {
+            ESP_ERROR_CHECK(esp_netif_dhcpc_stop(eth_netif));
+            ESP_ERROR_CHECK(esp_netif_set_ip_info(eth_netif, &ip_info));
+        }
+
         ESP_ERROR_CHECK(esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handles[0])));
     } else {
-        // Use ESP_NETIF_INHERENT_DEFAULT_ETH when multiple Ethernet interfaces are used and so you need to modify
-        // esp-netif configuration parameters for each interface (name, priority, etc.).
         esp_netif_inherent_config_t esp_netif_config = ESP_NETIF_INHERENT_DEFAULT_ETH();
         esp_netif_config_t cfg_spi = {
             .base = &esp_netif_config,
@@ -95,21 +108,27 @@ void start_lan(void)
         char if_key_str[10];
         char if_desc_str[10];
         char num_str[3];
+
         for (int i = 0; i < eth_port_cnt; i++) {
             itoa(i, num_str, 10);
             strcat(strcpy(if_key_str, "ETH_"), num_str);
             strcat(strcpy(if_desc_str, "eth"), num_str);
             esp_netif_config.if_key = if_key_str;
             esp_netif_config.if_desc = if_desc_str;
-            esp_netif_config.route_prio -= i*5;
+            esp_netif_config.route_prio -= i * 5;
+
             esp_netif_t *eth_netif = esp_netif_new(&cfg_spi);
 
-            // Attach Ethernet driver to TCP/IP stack
+            if (use_static_ip) {
+                ESP_ERROR_CHECK(esp_netif_dhcpc_stop(eth_netif));
+                ESP_ERROR_CHECK(esp_netif_set_ip_info(eth_netif, &ip_info));
+            }
+
             ESP_ERROR_CHECK(esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handles[i])));
         }
     }
 
-    // Register user defined event handers
+    // Register event handlers
     ESP_ERROR_CHECK(esp_event_handler_register(ETH_EVENT, ESP_EVENT_ANY_ID, &eth_event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, &got_ip_event_handler, NULL));
 
