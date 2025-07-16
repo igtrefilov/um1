@@ -1,0 +1,20 @@
+{
+  "lan": {
+    "dhcp": true,
+    "static_ip": "192.168.1.100",
+    "subnet": "255.255.255.0",
+    "gateway": "192.168.1.1",
+    "mode": "tcp"
+  },
+  "wifi": {
+    "enabled": true,
+    "ssid": "MyNetwork",
+    "password": "MyPassword"
+  },
+  "uart": {
+    "baudrate": 115200,
+    "parity": "none",
+    "stop_bits": 1
+  }
+}
+

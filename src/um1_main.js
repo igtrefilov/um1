@@ -1,5 +1,5 @@
 const logDiv = document.getElementById("log");
-const ws = new WebSocket("ws://192.168.0.106/ws");
+const ws = new WebSocket("ws://192.168.0.100/ws");
 
 function start_socket(){
 	ws.onopen = () => log("✅ Соединение открыто");
