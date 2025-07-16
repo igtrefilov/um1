@@ -22,6 +22,7 @@
 #include "um1_wifi.h"
 #include "um1_http_server.h"
 #include "um1_spiffs.h"
+#include "um1_config.h"
 
 void init_esp_environment(void)
 {
@@ -43,13 +44,15 @@ void app_main(void)
 
     init_esp_environment();
 
+    start_spiffs();
+	vTaskDelay(pdMS_TO_TICKS(1000));
+	read_config_and_apply();
+
 	start_softap();
 	vTaskDelay(pdMS_TO_TICKS(3000));
 	start_lan();
 	vTaskDelay(pdMS_TO_TICKS(3000));
 	start_webserver();
-	vTaskDelay(pdMS_TO_TICKS(1000));
-	start_spiffs();
 
     //start_uart_tasks(uart_to_net, net_to_uart);
     //start_lan_tasks(net_to_uart, uart_to_net);

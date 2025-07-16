@@ -46,65 +46,6 @@ static void eth_event_handler(void *arg, esp_event_base_t event_base,
     }
 }
 
-/*static void tcp_server_task(void *pvParameters)
-{
-	esp_netif_ip_info_t *ip_info = (esp_netif_ip_info_t *)pvParameters;
-    int listen_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
-    if (listen_sock < 0) {
-        ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
-        free(ip_info);
-        vTaskDelete(NULL);
-        return;
-    }
-
-    struct sockaddr_in server_addr = {
-        .sin_family = AF_INET,
-        .sin_addr.s_addr = ip_info->ip.addr,
-        .sin_port = htons(TCP_PORT),
-    };
-
-    free(ip_info);
-
-    int err = bind(listen_sock, (struct sockaddr*)&server_addr, sizeof(server_addr));
-    if (err < 0) {
-        ESP_LOGE(TAG, "Socket unable to bind: errno %d", errno);
-        close(listen_sock);
-        vTaskDelete(NULL);
-        return;
-    }
-
-    err = listen(listen_sock, LISTEN_BACKLOG);
-    if (err < 0) {
-        ESP_LOGE(TAG, "Error during listen: errno %d", errno);
-        close(listen_sock);
-        vTaskDelete(NULL);
-        return;
-    }
-
-    ESP_LOGI(TAG, "TCP server listening on port %d", TCP_PORT);
-
-    while (1) {
-        struct sockaddr_in client_addr;
-        socklen_t socklen = sizeof(client_addr);
-        int client_sock = accept(listen_sock, (struct sockaddr*)&client_addr, &socklen);
-        if (client_sock < 0) {
-            ESP_LOGE(TAG, "Unable to accept connection: errno %d", errno);
-            break;
-        }
-
-        ESP_LOGI(TAG, "Accepted connection from %s:%d",
-                 inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
-
-        const char *resp = "Hello from ESP32 LAN Ethernet TCP server!\r\n";
-        send(client_sock, resp, strlen(resp), 0);
-        close(client_sock);
-    }
-
-    close(listen_sock);
-    vTaskDelete(NULL);
-}*/
-
-/* Event handler for IP_EVENT_ETH_GOT_IP*/
 static void got_ip_event_handler(void *arg, esp_event_base_t event_base,
                                  int32_t event_id, void *event_data)
 {

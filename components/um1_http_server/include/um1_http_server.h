@@ -2,6 +2,7 @@
 #define UM1_HTTP_SERVER_H
 
 #include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/param.h>
@@ -16,6 +17,7 @@
 #include "esp_netif.h"
 #include "esp_tls.h"
 #include "esp_vfs.h"
+#include "esp_ota_ops.h"
 #include <esp_wifi.h>
 #include <esp_http_server.h>
 
