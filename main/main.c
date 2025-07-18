@@ -45,6 +45,7 @@ void app_main(void)
     init_esp_environment();
 
     start_spiffs();
+
 	vTaskDelay(pdMS_TO_TICKS(1000));
 	read_config_and_apply();
 

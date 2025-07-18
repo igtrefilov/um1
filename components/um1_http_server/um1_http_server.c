@@ -8,6 +8,56 @@ static size_t subs_count = 0;
 
 static const char *TAG = "http_server";
 
+httpd_uri_t config_get_uri = {
+    .uri      = "/api/config",
+    .method   = HTTP_GET,
+    .handler  = handle_get_config,
+    .user_ctx = NULL
+};
+
+const httpd_uri_t config_save = {
+    .uri       = "/config",
+    .method    = HTTP_POST,
+    .handler   = config_save_handler,
+    .user_ctx  = NULL
+};
+
+const httpd_uri_t upload = {
+    .uri       = "/upload",
+    .method    = HTTP_POST,
+    .handler   = file_upload_handler,
+    .user_ctx  = NULL
+};
+
+const httpd_uri_t ota_update = {
+    .uri       = "/ota",
+    .method    = HTTP_POST,
+    .handler   = ota_update_handler,
+    .user_ctx  = NULL
+};
+
+const httpd_uri_t spiffs_uri = {
+    .uri       = "/*",
+    .method    = HTTP_GET,
+    .handler   = spiffs_get_handler,
+    .user_ctx  = NULL
+};
+
+const httpd_uri_t ws = {
+        .uri        = "/ws",
+        .method     = HTTP_GET,
+        .handler    = echo_handler,
+        .user_ctx   = NULL,
+        .is_websocket = true
+};
+
+const httpd_uri_t reboot = {
+    .uri       = "/reboot",
+    .method    = HTTP_GET,
+    .handler   = reboot_handler,
+    .user_ctx  = NULL
+};
+
 static void add_subscriber(int fd) {
 	if (subs_count < MAX_SUBSCRIBERS) {
 		subscribers[subs_count++] = fd;
@@ -73,7 +123,7 @@ esp_err_t handle_get_config(httpd_req_t *req)
     return ESP_OK;
 }
 
-static esp_err_t config_save_handler(httpd_req_t *req)
+esp_err_t config_save_handler(httpd_req_t *req)
 {
     char buf[1024];
     int total_len = req->content_len;
@@ -104,7 +154,7 @@ static esp_err_t config_save_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-static esp_err_t file_upload_handler(httpd_req_t *req)
+esp_err_t file_upload_handler(httpd_req_t *req)
 {
     char filename[64];
     FILE *f = NULL;
@@ -133,6 +183,7 @@ static esp_err_t file_upload_handler(httpd_req_t *req)
 
     while (remaining > 0) {
         int to_read = MIN(remaining, UPLOAD_BUFFER_SIZE);
+        printf("remainning: %d\n", remaining);
         r = httpd_req_recv(req, buf, to_read);
         if (r <= 0) {
             fclose(f);
@@ -149,7 +200,79 @@ static esp_err_t file_upload_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-void ota_update_from_spiffs()
+esp_err_t ota_update_handler(httpd_req_t *req)
+{
+    const esp_partition_t* update_partition = esp_ota_get_next_update_partition(NULL);
+    if (!update_partition) {
+        ESP_LOGE(TAG, "No OTA partition found");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA partition not found");
+        return ESP_FAIL;
+    }
+
+    esp_ota_handle_t ota_handle;
+    esp_err_t err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &ota_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_begin failed: %s", esp_err_to_name(err));
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA begin failed");
+        return ESP_FAIL;
+    }
+
+    char buf[UPLOAD_BUFFER_SIZE];
+    int remaining = req->content_len;
+    int r;
+    int total = req->content_len;
+    int written = 0;
+
+    httpd_resp_set_type(req, "text/plain");
+    httpd_resp_set_hdr(req, "Transfer-Encoding", "chunked");
+
+    while (remaining > 0) {
+        int to_read = MIN(remaining, sizeof(buf));
+        r = httpd_req_recv(req, buf, to_read);
+        if (r <= 0) {
+            esp_ota_end(ota_handle);
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA receive error");
+            return ESP_FAIL;
+        }
+
+        err = esp_ota_write(ota_handle, buf, r);
+        if (err != ESP_OK) {
+            esp_ota_end(ota_handle);
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA write error");
+            return ESP_FAIL;
+        }
+
+        written += r;
+        remaining -= r;
+
+        // Отправка прогресса
+        char progress[64];
+        int len = snprintf(progress, sizeof(progress), "progress:%d\n", (written * 100) / total);
+        httpd_resp_send_chunk(req, progress, len);
+    }
+
+    err = esp_ota_end(ota_handle);
+    if (err != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA end error");
+        return ESP_FAIL;
+    }
+
+    err = esp_ota_set_boot_partition(update_partition);
+    if (err != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Set boot partition failed");
+        return ESP_FAIL;
+    }
+
+    httpd_resp_send_chunk(req, "done\n", strlen("done\n"));
+    httpd_resp_send_chunk(req, NULL, 0);  // конец передачи
+
+    ESP_LOGI(TAG, "OTA update complete, restarting...");
+    vTaskDelay(pdMS_TO_TICKS(500));  // дать клиенту дочитать ответ
+    esp_restart();
+    return ESP_OK;
+}
+
+/*void ota_update_from_spiffs()
 {
     const char* file_path = "/spiffs/app-template.bin";
     FILE* f = fopen(file_path, "rb");
@@ -196,9 +319,9 @@ static esp_err_t firmware_update_handler(httpd_req_t *req)
 
 
     return ESP_OK;
-}
+}*/
 
-static esp_err_t spiffs_get_handler(httpd_req_t *req)
+esp_err_t spiffs_get_handler(httpd_req_t *req)
 {
     char path[512];
     const char *base_path = "/spiffs/src";
@@ -237,7 +360,7 @@ static esp_err_t spiffs_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-static esp_err_t echo_handler(httpd_req_t *req) {
+esp_err_t echo_handler(httpd_req_t *req) {
     if (req->method == HTTP_GET) {
         ESP_LOGI(TAG, "WebSocket handshake");
         return ESP_OK;
@@ -270,7 +393,7 @@ static esp_err_t echo_handler(httpd_req_t *req) {
     return ret;
 }
 
-static esp_err_t reboot_handler(httpd_req_t *req)
+esp_err_t reboot_handler(httpd_req_t *req)
 {
     const char *resp = "MCU is rebooting...\n";
     httpd_resp_send(req, resp, strlen(resp));
@@ -281,56 +404,6 @@ static esp_err_t reboot_handler(httpd_req_t *req)
 
     return ESP_OK;
 }
-
-httpd_uri_t config_get_uri = {
-    .uri      = "/api/config",
-    .method   = HTTP_GET,
-    .handler  = handle_get_config,
-    .user_ctx = NULL
-};
-
-static const httpd_uri_t config_save = {
-    .uri       = "/config",
-    .method    = HTTP_POST,
-    .handler   = config_save_handler,
-    .user_ctx  = NULL
-};
-
-static const httpd_uri_t upload = {
-    .uri       = "/upload",
-    .method    = HTTP_POST,
-    .handler   = file_upload_handler,
-    .user_ctx  = NULL
-};
-
-static const httpd_uri_t update = {
-    .uri       = "/update",
-    .method    = HTTP_POST,
-    .handler   = firmware_update_handler,
-    .user_ctx  = NULL
-};
-
-static const httpd_uri_t spiffs_uri = {
-    .uri       = "/*",
-    .method    = HTTP_GET,
-    .handler   = spiffs_get_handler,
-    .user_ctx  = NULL
-};
-
-static const httpd_uri_t ws = {
-        .uri        = "/ws",
-        .method     = HTTP_GET,
-        .handler    = echo_handler,
-        .user_ctx   = NULL,
-        .is_websocket = true
-};
-
-static const httpd_uri_t reboot = {
-    .uri       = "/reboot",
-    .method    = HTTP_GET,
-    .handler   = reboot_handler,
-    .user_ctx  = NULL
-};
 
 static void connect_handler(void* arg, esp_event_base_t event_base,
                             int32_t event_id, void* event_data)
@@ -382,7 +455,7 @@ httpd_handle_t start_webserver(void)
         httpd_register_uri_handler(server, &config_get_uri);
         httpd_register_uri_handler(server, &config_save);
         httpd_register_uri_handler(server, &upload);
-        httpd_register_uri_handler(server, &update);
+        httpd_register_uri_handler(server, &ota_update);
         httpd_register_uri_handler(server, &reboot);
 
         httpd_register_uri_handler(server, &spiffs_uri);

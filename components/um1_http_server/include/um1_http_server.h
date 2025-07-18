@@ -29,6 +29,13 @@
 
 #include "um1_lan.h"
 
+esp_err_t handle_get_config(httpd_req_t *req);
+esp_err_t config_save_handler(httpd_req_t *req);
+esp_err_t file_upload_handler(httpd_req_t *req);
+esp_err_t ota_update_handler(httpd_req_t *req);
+esp_err_t spiffs_get_handler(httpd_req_t *req);
+esp_err_t echo_handler(httpd_req_t *req);
+esp_err_t reboot_handler(httpd_req_t *req);
 httpd_handle_t start_webserver(void);
 
 #endif // UM1_LAN_H

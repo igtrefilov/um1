@@ -191,6 +191,13 @@
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/esp_partition/CMakeFiles/install/local.dir
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/esp_partition/CMakeFiles/install/strip.dir
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/app_update/CMakeFiles/__idf_app_update.dir
+/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/app_update/CMakeFiles/blank_ota_data.dir
+/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/app_update/CMakeFiles/read-otadata.dir
+/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/app_update/CMakeFiles/read_otadata.dir
+/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/app_update/CMakeFiles/erase-otadata.dir
+/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/app_update/CMakeFiles/erase_otadata.dir
+/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/app_update/CMakeFiles/otadata-flash.dir
+/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/app_update/CMakeFiles/encrypted-otadata-flash.dir
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/app_update/CMakeFiles/edit_cache.dir
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/app_update/CMakeFiles/rebuild_cache.dir
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/app_update/CMakeFiles/list_install_components.dir
