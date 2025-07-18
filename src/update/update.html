@@ -11,8 +11,12 @@
 		<div class="content">
 			<label for="fileInput">Выберите файл c прошивкой:</label><br>
 			<input type="file" id="fileInput"><br><br>
-			<button onclick="updateFirmware()">z</button>
-		</div>
+			<button onclick="updateFirmware()">Обновить</button>
+		<br><br>
+		
+		<progress id="otaProgress" value="0" max="100" style="width: 100%; display: none;"></progress>
+    	<p id="otaStatus"></p>
+	</div>
 		<script src="update.js"></script>
 		<script>loadSidebar();</script>
 	</body>

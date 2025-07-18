@@ -49,23 +49,58 @@ async function sendFile() {
 }
 
 async function updateFirmware() {
+  const input = document.getElementById('fileInput');
+  const progressBar = document.getElementById('otaProgress');
+  const statusText = document.getElementById('otaStatus');
+
+  progressBar.value = 0;
+  progressBar.style.display = 'block';
+  statusText.textContent = '🚀 Начало обновления...';
+
+  if (!input.files.length) {
+    alert('Выберите файл');
+    return;
+  }
+
+  const file = input.files[0];
+
   try {
-
-    await sendFile();
-
-    // 2. Запрашиваем запуск OTA-обновления
-    const otaResponse = await fetch('/update', {
-      method: 'POST'
+    const response = await fetch('/ota', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream'
+      },
+      body: file
     });
 
-    if (!otaResponse.ok) {
-      const txt = await otaResponse.text();
-      throw new Error(`OTA failed: HTTP ${otaResponse.status}: ${txt}`);
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`OTA failed: ${text}`);
     }
 
-    log('✅ OTA update initiated');
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      chunk.split('\n').forEach(line => {
+        if (line.startsWith('progress:')) {
+          const percent = parseInt(line.split(':')[1]);
+          progressBar.value = percent;
+          statusText.textContent = `⏳ Обновление: ${percent}%`;
+        } else if (line.trim() === 'done') {
+          progressBar.value = 100;
+          statusText.textContent = '✅ Обновление завершено. Перезагрузка...';
+        }
+      });
+    }
+
   } catch (err) {
-    log('❌ Обновление не удалось: ' + err.message);
+    progressBar.style.display = 'none';
+    statusText.textContent = '❌ Ошибка OTA: ' + err.message;
   }
 }
 
@@ -75,13 +110,4 @@ function log(msg) {
   pre.textContent = msg;
   document.body.appendChild(pre);
 }
-
-// Инициализация WebSocket при загрузке страницы
-let ws;
-(function initWs() {
-  ws = new WebSocket(`ws://${location.host}/ws`);
-  ws.onopen = () => log('🔌 WS connected');
-  ws.onmessage = (evt) => log('📥 WS: ' + evt.data);
-  ws.onclose = () => log('🔌 WS disconnected');
-})();
 
