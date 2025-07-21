@@ -5,6 +5,7 @@
 
 static int subscribers[MAX_SUBSCRIBERS];
 static size_t subs_count = 0;
+static int ota_ws_fd = -1;
 
 static const char *TAG = "http_server";
 
@@ -245,11 +246,25 @@ esp_err_t ota_update_handler(httpd_req_t *req)
         remaining -= r;
 
         int percent = (written * 100) / total;
-        char progress[64];
-        int len = snprintf(progress, sizeof(progress), "progress:%d\n", percent);
-        httpd_resp_send_chunk(req, progress, len);
+        //printf("OTA progress: %d%% (%d/%d)\n", percent, written, total);
 
-        printf("OTA progress: %d%% (%d/%d)\n", percent, written, total);
+        // Отправка прогресса через WebSocket (если подключен)
+        if (ota_ws_fd != -1) {
+            char ws_msg[32];
+            snprintf(ws_msg, sizeof(ws_msg), "progress:%d", percent);
+            printf("WS send progress: %s\n", ws_msg);
+            httpd_ws_frame_t ws_pkt = {
+                .payload = (uint8_t *)ws_msg,
+                .len = strlen(ws_msg),
+                .type = HTTPD_WS_TYPE_TEXT
+            };
+
+            esp_err_t ws_err = httpd_ws_send_frame_async(req->handle, ota_ws_fd, &ws_pkt);
+            if (ws_err != ESP_OK) {
+                ESP_LOGW(TAG, "Failed to send OTA progress over WebSocket: %s", esp_err_to_name(ws_err));
+                ota_ws_fd = -1;  // отключаем прогресс если клиент пропал
+            }
+        }
     }
 
     err = esp_ota_end(ota_handle);
@@ -262,6 +277,17 @@ esp_err_t ota_update_handler(httpd_req_t *req)
     if (err != ESP_OK) {
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Set boot partition failed");
         return ESP_FAIL;
+    }
+
+    if (ota_ws_fd != -1) {
+        const char *done_msg = "done";
+        httpd_ws_frame_t ws_pkt = {
+            .payload = (uint8_t *)done_msg,
+            .len = strlen(done_msg),
+            .type = HTTPD_WS_TYPE_TEXT
+        };
+        httpd_ws_send_frame_async(req->handle, ota_ws_fd, &ws_pkt);
+        ota_ws_fd = -1;
     }
 
     httpd_resp_send_chunk(req, "done\n", strlen("done\n"));
@@ -331,7 +357,16 @@ esp_err_t echo_handler(httpd_req_t *req) {
     ESP_LOGI(TAG, "Received message: %s", buf);
     int fd = httpd_req_to_sockfd(req);
 
+    if (strcmp((char*)buf, "OTA_PROGRESS") == 0) {
+    	ESP_LOGI(TAG, "Start OTA progress");
+        ota_ws_fd = fd;
+        ESP_LOGI(TAG, "OTA progress WebSocket client connected");
+        free(buf);
+        return ESP_OK;
+    }
+
     if (strcmp((char*)buf, "START_STREAM") == 0) {
+    	ESP_LOGI(TAG, "LOGI START_STREAM");
         add_subscriber(fd);
         free(buf);
         return ESP_OK;
