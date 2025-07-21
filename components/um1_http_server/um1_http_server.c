@@ -219,7 +219,6 @@ esp_err_t ota_update_handler(httpd_req_t *req)
 
     char buf[UPLOAD_BUFFER_SIZE];
     int remaining = req->content_len;
-    int r;
     int total = req->content_len;
     int written = 0;
 
@@ -228,7 +227,7 @@ esp_err_t ota_update_handler(httpd_req_t *req)
 
     while (remaining > 0) {
         int to_read = MIN(remaining, sizeof(buf));
-        r = httpd_req_recv(req, buf, to_read);
+        int r = httpd_req_recv(req, buf, to_read);
         if (r <= 0) {
             esp_ota_end(ota_handle);
             httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OTA receive error");
@@ -245,10 +244,12 @@ esp_err_t ota_update_handler(httpd_req_t *req)
         written += r;
         remaining -= r;
 
-        // Отправка прогресса
+        int percent = (written * 100) / total;
         char progress[64];
-        int len = snprintf(progress, sizeof(progress), "progress:%d\n", (written * 100) / total);
+        int len = snprintf(progress, sizeof(progress), "progress:%d\n", percent);
         httpd_resp_send_chunk(req, progress, len);
+
+        printf("OTA progress: %d%% (%d/%d)\n", percent, written, total);
     }
 
     err = esp_ota_end(ota_handle);
@@ -264,62 +265,13 @@ esp_err_t ota_update_handler(httpd_req_t *req)
     }
 
     httpd_resp_send_chunk(req, "done\n", strlen("done\n"));
-    httpd_resp_send_chunk(req, NULL, 0);  // конец передачи
+    httpd_resp_send_chunk(req, NULL, 0);
 
     ESP_LOGI(TAG, "OTA update complete, restarting...");
-    vTaskDelay(pdMS_TO_TICKS(500));  // дать клиенту дочитать ответ
+    vTaskDelay(pdMS_TO_TICKS(500));
     esp_restart();
     return ESP_OK;
 }
-
-/*void ota_update_from_spiffs()
-{
-    const char* file_path = "/spiffs/app-template.bin";
-    FILE* f = fopen(file_path, "rb");
-    if (f == NULL) {
-        ESP_LOGE(TAG, "Failed to open firmware file");
-        return;
-    }
-
-    esp_ota_handle_t ota_handle;
-    const esp_partition_t* update_partition = esp_ota_get_next_update_partition(NULL);
-    if (update_partition == NULL) {
-        ESP_LOGE(TAG, "No OTA partition found");
-        fclose(f);
-        return;
-    }
-
-    ESP_LOGI(TAG, "Starting OTA from %s", file_path);
-    ESP_ERROR_CHECK(esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &ota_handle));
-
-    uint8_t buffer[1024];
-    size_t read_bytes;
-    while ((read_bytes = fread(buffer, 1, sizeof(buffer), f)) > 0) {
-        ESP_ERROR_CHECK(esp_ota_write(ota_handle, buffer, read_bytes));
-    }
-
-    fclose(f);
-
-    ESP_ERROR_CHECK(esp_ota_end(ota_handle));
-
-    ESP_ERROR_CHECK(esp_ota_set_boot_partition(update_partition));
-
-    ESP_LOGI(TAG, "OTA update complete, restarting...");
-    esp_restart();
-}
-
-static esp_err_t firmware_update_handler(httpd_req_t *req)
-{
-    httpd_resp_set_type(req, "text/plain");
-    httpd_resp_sendstr(req, "OTA update starting...\n");
-
-    vTaskDelay(pdMS_TO_TICKS(100));
-
-    ota_update_from_spiffs();
-
-
-    return ESP_OK;
-}*/
 
 esp_err_t spiffs_get_handler(httpd_req_t *req)
 {
