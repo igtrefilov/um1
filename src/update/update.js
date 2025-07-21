@@ -1,3 +1,18 @@
+const logDiv = document.getElementById("log");
+const otaSocket = new WebSocket(`ws://${location.host}/ws`);
+
+function start_socket(){
+	otaSocket.onopen = () => log("✅ Соединение с сервером установлено");
+	otaSocket.onerror = err => log("⚠️ Ошибка соединения с сервером: " + err);
+}
+
+function log(msg) {
+	const line = document.createElement("div");
+	line.textContent = msg;
+	logDiv.appendChild(line);
+	logDiv.scrollTop = logDiv.scrollHeight;
+}
+
 function loadSidebar(){
     fetch('../sidebar.html')
         .then(resp => resp.text())
@@ -51,7 +66,29 @@ async function uploadFirmware(file) {
   statusText.textContent = '🚀 Отправка прошивки...';
 
   try {
-    const response = await fetch('/ota', {
+    otaSocket.send("OTA_PROGRESS");
+
+    otaSocket.onmessage = (event) => {
+      const msg = event.data;
+      if (msg.startsWith("progress:")) {
+        const percent = parseInt(msg.split(":")[1]);
+        if (!isNaN(percent)) {
+          progressBar.value = percent;
+          statusText.textContent = `⏳ Обновление: ${percent}%`;
+        }
+      } else if (msg === "done") {
+        progressBar.value = 100;
+        statusText.textContent = '✅ Прошивка завершена. Перезагрузка...';
+      }
+    };
+
+    otaSocket.onerror = (err) => {
+      console.error("WebSocket error:", err);
+      statusText.textContent = "⚠️ Ошибка WebSocket";
+    };
+
+    // 2. Отправим прошивку через fetch
+    const res = await fetch('/ota', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/octet-stream'
@@ -59,37 +96,21 @@ async function uploadFirmware(file) {
       body: file
     });
 
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`OTA ошибка: ${text}`);
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      chunk.split('\n').forEach(line => {
-        if (line.startsWith('progress:')) {
-          const percent = parseInt(line.split(':')[1]);
-          progressBar.value = percent;
-          statusText.textContent = `⏳ Обновление: ${percent}%`;
-        } else if (line.trim() === 'done') {
-          progressBar.value = 100;
-          statusText.textContent = '✅ Прошивка завершена. Перезагрузка...';
-        }
-      });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Ошибка OTA: ${text}`);
     }
 
   } catch (err) {
     progressBar.style.display = 'none';
     statusText.textContent = '❌ Ошибка OTA: ' + err.message;
+
+  } finally {
+    if (otaSocket && otaSocket.readyState === WebSocket.OPEN) {
+      otaSocket.close();
+    }
   }
 }
-
 async function uploadWebFiles(srcFiles) {
   const progressBar = document.getElementById('webProgress');
   const statusText = document.getElementById('webStatus');
@@ -139,3 +160,5 @@ async function uploadWebFiles(srcFiles) {
   statusText.textContent = "✅ Web UI успешно обновлён!";
   return true;
 }
+
+document.addEventListener("DOMContentLoaded", start_socket);
