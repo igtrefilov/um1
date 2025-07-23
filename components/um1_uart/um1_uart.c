@@ -44,11 +44,7 @@ void uart1_task(void *arg) {
     while (1) {
         int len = uart_read_bytes(UART_PORT_NUM_1, uart_buffer, BUF_SIZE - 1, 1 / portTICK_PERIOD_MS);
         if (len > 0) {
-            printf("uart1: len=%d ", len);
-            for (int i = 0; i < len; i++) {
-                printf("%02X ", uart_buffer[i]);
-            }
-            printf("\n");
+        	send_uart_ws_data(UART_PORT_NUM_1, uart_buffer, len);
         }
         vTaskDelay(1);
     }
@@ -67,11 +63,7 @@ void uart2_task(void *arg) {
     while (1) {
         int len = uart_read_bytes(UART_PORT_NUM_2, uart_buffer, BUF_SIZE - 1, 1 / portTICK_PERIOD_MS);
         if (len > 0) {
-            printf("uart2: len=%d ", len);
-            for (int i = 0; i < len; i++) {
-                printf("%02X ", uart_buffer[i]);
-            }
-            printf("\n");
+        	send_uart_ws_data(UART_PORT_NUM_2, uart_buffer, len);
         }
         vTaskDelay(1);
     }

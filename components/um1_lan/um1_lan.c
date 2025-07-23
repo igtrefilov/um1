@@ -122,7 +122,6 @@ void handle_client(int client_sock) {
 			char path[128];
 			if (sscanf(cmd + 6, "%127s", path) == 1) {
 				ESP_LOGI(TAG, "RMDIR %s", path);
-				// Рекурсивная функция
 				extern void rmdir_recursive(const char *path, int sock);
 				rmdir_recursive(path, client_sock);
 				send_text(client_sock, "OK\n");

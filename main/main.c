@@ -39,29 +39,22 @@ void init_esp_environment(void)
 
 void app_main(void)
 {
-    //QueueHandle_t uart_to_net = xQueueCreate(512, sizeof(uint8_t));
-    //QueueHandle_t net_to_uart = xQueueCreate(512, sizeof(uint8_t));
-
     init_esp_environment();
 
     start_spiffs();
-
-	vTaskDelay(pdMS_TO_TICKS(1000));
+    vTaskDelay(pdMS_TO_TICKS(1000));
 	read_config_and_apply();
 
 	start_softap();
 	vTaskDelay(pdMS_TO_TICKS(1000));
+
 	start_lan();
 	vTaskDelay(pdMS_TO_TICKS(1000));
+
 	start_webserver();
 	vTaskDelay(pdMS_TO_TICKS(1000));
-	start_uart();
 
-    //start_uart_tasks(uart_to_net, net_to_uart);
-    //start_lan_tasks(net_to_uart, uart_to_net);
-    // start_wifi_tasks(...);
-    // start_bt_tasks(...);
-    // start_ble_tasks(...);
+	start_uart();
 
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(1000));

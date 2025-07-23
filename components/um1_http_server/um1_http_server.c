@@ -3,7 +3,8 @@
 #define MAX_SUBSCRIBERS 10
 #define UPLOAD_BUFFER_SIZE  1024
 
-static int subscribers[MAX_SUBSCRIBERS];
+httpd_handle_t global_http_server = NULL;
+static ws_subscriber_t subscribers[MAX_SUBSCRIBERS];
 static size_t subs_count = 0;
 static int ota_ws_fd = -1;
 
@@ -47,7 +48,7 @@ const httpd_uri_t spiffs_uri = {
 const httpd_uri_t ws = {
         .uri        = "/ws",
         .method     = HTTP_GET,
-        .handler    = echo_handler,
+        .handler    = ws_control_handler,
         .user_ctx   = NULL,
         .is_websocket = true
 };
@@ -59,40 +60,21 @@ const httpd_uri_t reboot = {
     .user_ctx  = NULL
 };
 
-static void add_subscriber(int fd) {
-	if (subs_count < MAX_SUBSCRIBERS) {
-		subscribers[subs_count++] = fd;
-		ESP_LOGI(TAG, "Subscriber added, total = %d", subs_count);
-	}
+static void add_subscriber(int fd, bool uart1, bool uart2) {
+    if (subs_count < MAX_SUBSCRIBERS) {
+        subscribers[subs_count++] = (ws_subscriber_t){ .fd = fd, .uart1 = uart1, .uart2 = uart2 };
+        ESP_LOGI(TAG, "Subscriber added: fd=%d, uart1=%d, uart2=%d, total=%d", fd, uart1, uart2, subs_count);
+    }
 }
 
 static void remove_subscriber(int fd) {
-	for (size_t i = 0; i < subs_count; ++i) {
-		if (subscribers[i] == fd) {
-			subscribers[i] = subscribers[--subs_count];
-			ESP_LOGI(TAG, "Subscriber removed, total = %d", subs_count);
-			break;
-		}
-	}
-}
-
-static void stream_task(void *arg) {
-    httpd_handle_t hd = (httpd_handle_t)arg;
-    while (true) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        static int counter = 0;
-        char data[64];
-        int len = snprintf(data, sizeof(data), "Stream data #%d", counter++);
-        httpd_ws_frame_t ws_pkt = {
-            .payload = (uint8_t*)data,
-            .len     = len,
-            .type    = HTTPD_WS_TYPE_TEXT
-        };
-        for (size_t i = 0; i < subs_count; ++i) {
-            httpd_ws_send_frame_async(hd, subscribers[i], &ws_pkt);
+    for (size_t i = 0; i < subs_count; ++i) {
+        if (subscribers[i].fd == fd) {
+            subscribers[i] = subscribers[--subs_count];
+            ESP_LOGI(TAG, "Subscriber removed, total = %d", subs_count);
+            break;
         }
     }
-    vTaskDelete(NULL);
 }
 
 esp_err_t handle_get_config(httpd_req_t *req)
@@ -246,9 +228,7 @@ esp_err_t ota_update_handler(httpd_req_t *req)
         remaining -= r;
 
         int percent = (written * 100) / total;
-        //printf("OTA progress: %d%% (%d/%d)\n", percent, written, total);
 
-        // Отправка прогресса через WebSocket (если подключен)
         if (ota_ws_fd != -1) {
             char ws_msg[32];
             snprintf(ws_msg, sizeof(ws_msg), "progress:%d", percent);
@@ -262,7 +242,7 @@ esp_err_t ota_update_handler(httpd_req_t *req)
             esp_err_t ws_err = httpd_ws_send_frame_async(req->handle, ota_ws_fd, &ws_pkt);
             if (ws_err != ESP_OK) {
                 ESP_LOGW(TAG, "Failed to send OTA progress over WebSocket: %s", esp_err_to_name(ws_err));
-                ota_ws_fd = -1;  // отключаем прогресс если клиент пропал
+                ota_ws_fd = -1;
             }
         }
     }
@@ -338,7 +318,7 @@ esp_err_t spiffs_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-esp_err_t echo_handler(httpd_req_t *req) {
+esp_err_t ws_control_handler(httpd_req_t *req) {
     if (req->method == HTTP_GET) {
         ESP_LOGI(TAG, "WebSocket handshake");
         return ESP_OK;
@@ -346,8 +326,7 @@ esp_err_t echo_handler(httpd_req_t *req) {
 
     httpd_ws_frame_t ws_pkt = { .type = HTTPD_WS_TYPE_TEXT };
     esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
-    if (ret != ESP_OK) return ret;
-    if (ws_pkt.len == 0) return ESP_OK;
+    if (ret != ESP_OK || ws_pkt.len == 0) return ret;
 
     uint8_t *buf = calloc(1, ws_pkt.len + 1);
     ws_pkt.payload = buf;
@@ -357,27 +336,60 @@ esp_err_t echo_handler(httpd_req_t *req) {
     ESP_LOGI(TAG, "Received message: %s", buf);
     int fd = httpd_req_to_sockfd(req);
 
-    if (strcmp((char*)buf, "OTA_PROGRESS") == 0) {
-    	ESP_LOGI(TAG, "Start OTA progress");
-        ota_ws_fd = fd;
-        ESP_LOGI(TAG, "OTA progress WebSocket client connected");
-        free(buf);
-        return ESP_OK;
-    }
-
-    if (strcmp((char*)buf, "START_STREAM") == 0) {
-    	ESP_LOGI(TAG, "LOGI START_STREAM");
-        add_subscriber(fd);
-        free(buf);
-        return ESP_OK;
-    } else if (strcmp((char*)buf, "STOP_STREAM") == 0) {
+    if (strcmp((char*)buf, "STOP_STREAM") == 0) {
         remove_subscriber(fd);
         free(buf);
         return ESP_OK;
     }
+
+    cJSON *root = cJSON_Parse((char*)buf);
+    if (root) {
+        const cJSON *action = cJSON_GetObjectItem(root, "action");
+        if (action && strcmp(action->valuestring, "START_STREAM") == 0) {
+            bool uart1 = cJSON_IsTrue(cJSON_GetObjectItem(root, "uart1"));
+            bool uart2 = cJSON_IsTrue(cJSON_GetObjectItem(root, "uart2"));
+            add_subscriber(fd, uart1, uart2);
+            cJSON_Delete(root);
+            free(buf);
+            return ESP_OK;
+        }
+        cJSON_Delete(root);
+    }
+
+    if (strcmp((char*)buf, "OTA_PROGRESS") == 0) {
+        ota_ws_fd = fd;
+        free(buf);
+        return ESP_OK;
+    }
+
     ret = httpd_ws_send_frame(req, &ws_pkt);
     free(buf);
     return ret;
+}
+
+void send_uart_ws_data(int uart_port, const uint8_t *data, size_t len) {
+    const char *prefix = uart_port == UART_PORT_NUM_1 ? "uart1:" : "uart2:";
+    char msg[128];
+    for (size_t i = 0; i < subs_count; ++i) {
+        bool enabled = (uart_port == UART_PORT_NUM_1) ? subscribers[i].uart1 : subscribers[i].uart2;
+        if (!enabled) continue;
+
+        int offset = snprintf(msg, sizeof(msg), "%s", prefix);
+        for (int j = 0; j < len && offset < sizeof(msg) - 3; ++j) {
+            offset += snprintf(msg + offset, sizeof(msg) - offset, "%02X ", data[j]);
+        }
+
+        httpd_ws_frame_t ws_pkt = {
+            .payload = (uint8_t *)msg,
+            .len = strlen(msg),
+            .type = HTTPD_WS_TYPE_TEXT
+        };
+
+        extern httpd_handle_t global_http_server;
+        if (global_http_server) {
+            httpd_ws_send_frame_async(global_http_server, subscribers[i].fd, &ws_pkt);
+        }
+    }
 }
 
 esp_err_t reboot_handler(httpd_req_t *req)
@@ -429,7 +441,6 @@ httpd_handle_t start_webserver(void)
     config.uri_match_fn = httpd_uri_match_wildcard;
     config.lru_purge_enable = true;
 
-    // Start the httpd server
     ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
 
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &connect_handler, &server));
@@ -447,8 +458,8 @@ httpd_handle_t start_webserver(void)
 
         httpd_register_uri_handler(server, &spiffs_uri);
 
+        global_http_server = server;
 
-        xTaskCreate(stream_task, "ws_stream_task", 4096, server, tskIDLE_PRIORITY + 1, NULL);
         return server;
     }
 
