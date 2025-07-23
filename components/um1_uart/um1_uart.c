@@ -1,45 +1,82 @@
 #include "um1_uart.h"
 
-typedef struct {
-    QueueHandle_t rx_to_net_queue;
-    QueueHandle_t net_to_tx_queue;
-} uart_task_ctx_t;
+void start_uart(void){
+	uart_config_t uart1_config= {
+		        .baud_rate = UART_BAUD_RATE,
+		        .data_bits = UART_DATA_8_BITS,
+		        .parity    = UART_PARITY_EVEN,
+		        .stop_bits = UART_STOP_BITS_1,
+		        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+		        .source_clk = UART_SCLK_DEFAULT,
+		    };
 
-static uart_task_ctx_t uart_ctx;
+	uart_config_t uart2_config= {
+			        .baud_rate = UART_BAUD_RATE,
+			        .data_bits = UART_DATA_8_BITS,
+			        .parity    = UART_PARITY_EVEN,
+			        .stop_bits = UART_STOP_BITS_1,
+			        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+			        .source_clk = UART_SCLK_DEFAULT,
+			    };
 
-void uart_task_rx(void *arg) {
-    /*uart_task_ctx_t *ctx = (uart_task_ctx_t *)arg;
-    uint8_t byte;
+	int intr_alloc_flags = 0;
+
+	ESP_ERROR_CHECK(uart_driver_install(UART_PORT_NUM_1, BUF_SIZE * 2, 0, 0, NULL, intr_alloc_flags));
+	ESP_ERROR_CHECK(uart_driver_install(UART_PORT_NUM_2, BUF_SIZE * 2, 0, 0, NULL, intr_alloc_flags));
+
+	ESP_ERROR_CHECK(uart_param_config(UART_PORT_NUM_1, &uart1_config));
+	ESP_ERROR_CHECK(uart_param_config(UART_PORT_NUM_2, &uart2_config));
+
+	ESP_ERROR_CHECK(uart_set_pin(UART_PORT_NUM_1, UART1_TXD, UART1_RXD, -1, -1));
+	ESP_ERROR_CHECK(uart_set_pin(UART_PORT_NUM_2, UART2_TXD, UART2_RXD, -1, -1));
+
+	xTaskCreate(&uart1_task, "uart1_task", 4096, NULL, 5, NULL);
+	xTaskCreate(&uart2_task, "uart2_task", 4096, NULL, 5, NULL);
+}
+
+void uart1_task(void *arg) {
+    uint8_t *uart_buffer = (uint8_t *)malloc(BUF_SIZE);
+    if (uart_buffer == NULL) {
+        printf("Failed to allocate memory for uart_buffer\n");
+        vTaskDelete(NULL);
+    }
+
     while (1) {
-        if (uart_read_bytes(UART_NUM_1, &byte, 1, portMAX_DELAY) > 0) {
-            xQueueSend(ctx->rx_to_net_queue, &byte, portMAX_DELAY);
+        int len = uart_read_bytes(UART_PORT_NUM_1, uart_buffer, BUF_SIZE - 1, 1 / portTICK_PERIOD_MS);
+        if (len > 0) {
+            printf("uart1: len=%d ", len);
+            for (int i = 0; i < len; i++) {
+                printf("%02X ", uart_buffer[i]);
+            }
+            printf("\n");
         }
-    }*/
-	while(1){
-		printf("uart_task_rx \n");
-		vTaskDelay(pdMS_TO_TICKS(1000));
-	}
+        vTaskDelay(1);
+    }
+
+    free(uart_buffer);
+    vTaskDelete(NULL);
 }
 
-void uart_task_tx(void *arg) {
-    /*uart_task_ctx_t *ctx = (uart_task_ctx_t *)arg;
-    uint8_t byte;
+void uart2_task(void *arg) {
+    uint8_t *uart_buffer = (uint8_t *)malloc(BUF_SIZE);
+    if (uart_buffer == NULL) {
+        printf("Failed to allocate memory for uart_buffer\n");
+        vTaskDelete(NULL);
+    }
+
     while (1) {
-        if (xQueueReceive(ctx->net_to_tx_queue, &byte, portMAX_DELAY)) {
-            uart_write_bytes(UART_NUM_1, (char *)&byte, 1);
+        int len = uart_read_bytes(UART_PORT_NUM_2, uart_buffer, BUF_SIZE - 1, 1 / portTICK_PERIOD_MS);
+        if (len > 0) {
+            printf("uart2: len=%d ", len);
+            for (int i = 0; i < len; i++) {
+                printf("%02X ", uart_buffer[i]);
+            }
+            printf("\n");
         }
-    }*/
-	while(1){
-		printf("uart_task_tx \n");
-		vTaskDelay(pdMS_TO_TICKS(1000));
-	}
+        vTaskDelay(1);
+    }
+
+    free(uart_buffer);
+    vTaskDelete(NULL);
 }
 
-void start_uart_tasks(QueueHandle_t rx_to_net, QueueHandle_t net_to_tx)
-{
-    uart_ctx.rx_to_net_queue = rx_to_net;
-    uart_ctx.net_to_tx_queue = net_to_tx;
-
-    xTaskCreate(uart_task_rx, "uart_rx", 4096, &uart_ctx, 3, NULL);
-    xTaskCreate(uart_task_tx, "uart_tx", 4096, &uart_ctx, 3, NULL);
-}
