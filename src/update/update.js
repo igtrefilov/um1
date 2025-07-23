@@ -46,14 +46,12 @@ async function uploadAll() {
     return;
   }
 
-  // 1. Обновление Web UI
   const webOk = await uploadWebFiles(srcFiles);
   if (!webOk) {
     alert("Ошибка загрузки Web UI. OTA отменено.");
     return;
   }
 
-  // 2. Обновление прошивки
   await uploadFirmware(firmwareFile);
 }
 
@@ -87,7 +85,6 @@ async function uploadFirmware(file) {
       statusText.textContent = "⚠️ Ошибка WebSocket";
     };
 
-    // 2. Отправим прошивку через fetch
     const res = await fetch('/ota', {
       method: 'POST',
       headers: {
@@ -128,7 +125,7 @@ async function uploadWebFiles(srcFiles) {
   let uploaded = 0;
 
   for (const file of srcFiles) {
-    const rel = file.webkitRelativePath.replace("update/", ""); // src/...
+    const rel = file.webkitRelativePath.replace("update/", "");
 
     try {
       const res = await fetch('/upload', {

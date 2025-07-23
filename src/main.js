@@ -25,8 +25,20 @@ function loadSidebar(){
 }
 
 function startStream() {
-	ws.send("START_STREAM");
-	log("📤 Sent: START_STREAM");
+  const uart1 = document.getElementById("uart1").checked;
+  const uart2 = document.getElementById("uart2").checked;
+  const msg = JSON.stringify({
+    action: "START_STREAM",
+    uart1,
+    uart2
+  });
+
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(msg);
+    log("📤 Sent: " + msg);
+  } else {
+    log("⚠️ WebSocket не подключен");
+  }
 }
 
 function stopStream() {

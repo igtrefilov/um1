@@ -1,0 +1,17 @@
+#message{
+	width: 30%;
+}
+
+.stream-output {
+  background-color: white;
+  border: 1px solid #ccc;
+  padding: 10px;
+  font-family: monospace;
+  white-space: pre-wrap;
+  overflow-y: auto;
+  flex-grow: 1;
+  height: 95%;
+  margin-top: 30px;
+  margin-bottom: 10px;
+}
+
