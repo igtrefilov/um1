@@ -1,0 +1,41 @@
+button{
+	margin-top: 50px;
+	margin-left: 30px;
+	width: 10%;
+}
+
+.settings-table {
+	width: 20%;
+    border-collapse: collapse;
+  }
+
+.settings-table td {
+	padding: 6px 12px;
+	vertical-align: middle;
+	text-align: left;
+}
+
+.settings-table input {
+	margin: 0;
+	vertical-align: middle;
+	}
+
+.disabled-field {
+  background-color: #eee;
+  color: #666;
+}
+
+.notification {
+  background-color: #4caf50;
+  color: white;
+  padding: 10px 16px;
+  margin-top: 10px;
+  border-radius: 4px;
+  font-weight: bold;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  transition: opacity 0.3s ease;
+}
+
+.notification.error {
+  background-color: #f44336;
+}

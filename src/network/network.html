@@ -1,18 +1,68 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="UTF-8">
-  <title>УМ1 сеть</title>
-  <link rel="icon" type="image/png" href="../favicon.png">  
-  <link rel="stylesheet" href="../common.css">
-  <link rel="stylesheet" href="network.css">
-</head>
-<body>
-	<div class="sidebar" id="sidebar"></div>
-	<div class="content">
-		<p>Информация о состоянии сети</p>
-	</div>
-	<script src="network.js"></script>
-	<script>loadSidebar();</script>
-</body>
+	<head>
+	  <meta charset="UTF-8">
+	  <title>УМ1 Сеть</title>
+	  <link rel="icon" type="image/png" href="../favicon.png">  
+	  <link rel="stylesheet" href="../common.css">
+	  <link rel="stylesheet" href="network.css">
+	</head>
+	<body>
+		<div class="sidebar" id="sidebar"></div>
+		<div class="content">
+			<div id="notif" class="notification" style="display:none;"></div>
+			<h3>LAN</h3>
+			<table class="settings-table">
+			  <tr>
+				<td>DHCP:</td>
+				<td><input type="checkbox" id="lan_dhcp"></td>
+			  </tr>
+			  <tr>
+				<td>Static IP:</td>
+				<td><input type="text" id="lan_static_ip" value="192.168.0.100"></td>
+			  </tr>
+			  <tr>
+				<td>Subnet:</td>
+				<td><input type="text" id="lan_subnet" value="255.255.255.0"></td>
+			  </tr>
+			  <tr>
+				<td>Gateway:</td>
+				<td><input type="text" id="lan_gateway" value="192.168.0.1"></td>
+			  </tr>
+			  <tr>
+				<td>Mode:</td>
+				<td>
+				  <select id="lan_mode">
+					<option value="tcp">TCP</option>
+					<option value="udp">UDP</option>
+				  </select>
+				</td>
+			  </tr>
+			</table>
+
+			<h3>Wi-Fi</h3>
+			<table class="settings-table">
+			  <tr>
+				<td>Включено:</td>
+				<td><input type="checkbox" id="wifi_enabled"></td>
+			  </tr>
+			  <tr>
+				<td>SSID:</td>
+				<td><input type="text" id="wifi_ssid" value="MyNetwork"></td>
+			  </tr>
+			  <tr>
+				<td>Password:</td>
+				<td><input type="password" id="wifi_password" value="MyPassword"></td>
+			  </tr>
+			</table>
+
+			<br>
+			<button onclick="collectSettings()">Сохранить настройки</button>
+			<pre id="json_output"></pre>
+			
+		</div>
+		<script src="network.js"></script>
+		<script>loadSidebar();</script>
+		<script>loadConfigFromServer();</script>
+	</body>
 </html>
