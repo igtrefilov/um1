@@ -1,0 +1,17 @@
+.sysinfo-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: monospace;
+    margin-top: 10px;
+}
+
+.sysinfo-table td {
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+}
+
+.sysinfo-table .key {
+    font-weight: bold;
+    background-color: #f0f0f0;
+    width: 250px;
+}
