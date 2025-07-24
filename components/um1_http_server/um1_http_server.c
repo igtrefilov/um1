@@ -108,29 +108,77 @@ esp_err_t handle_get_config(httpd_req_t *req)
 
 esp_err_t config_save_handler(httpd_req_t *req)
 {
-    char buf[1024];
     int total_len = req->content_len;
-    int cur_len = 0, received;
-
-    while (cur_len < total_len) {
-        received = httpd_req_recv(req, buf + cur_len, sizeof(buf) - cur_len);
-        if (received <= 0) return ESP_FAIL;
-        cur_len += received;
+    char *buf = malloc(total_len + 1);
+    if (!buf) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Memory allocation failed");
+        return ESP_FAIL;
     }
 
+    int cur_len = 0, received;
+    while (cur_len < total_len) {
+        received = httpd_req_recv(req, buf + cur_len, total_len - cur_len);
+        if (received <= 0) {
+            free(buf);
+            return ESP_FAIL;
+        }
+        cur_len += received;
+    }
     buf[cur_len] = '\0';
 
-    FILE *f = fopen("/spiffs/src/config.json", "w");
+
+    FILE *f = fopen("/spiffs/src/config.json", "r");
+    char *file_buf = NULL;
+    cJSON *root = NULL;
+
+    if (f) {
+        fseek(f, 0, SEEK_END);
+        long fsize = ftell(f);
+        fseek(f, 0, SEEK_SET);
+        file_buf = malloc(fsize + 1);
+        if (file_buf) {
+            fread(file_buf, 1, fsize, f);
+            file_buf[fsize] = '\0';
+            root = cJSON_Parse(file_buf);
+            free(file_buf);
+        }
+        fclose(f);
+    }
+
+    if (!root) root = cJSON_CreateObject();
+
+    cJSON *incoming = cJSON_Parse(buf);
+    free(buf);
+
+    if (!incoming) {
+        cJSON_Delete(root);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    cJSON *item = NULL;
+    cJSON_ArrayForEach(item, incoming) {
+    	cJSON *item = NULL;
+    	cJSON_ArrayForEach(item, incoming) {
+    	    cJSON_DeleteItemFromObject(root, item->string);
+    	    cJSON_AddItemToObject(root, item->string, cJSON_Duplicate(item, 1));
+    	}
+    }
+
+    char *out = cJSON_Print(root);
+    cJSON_Delete(incoming);
+    cJSON_Delete(root);
+
+    f = fopen("/spiffs/src/config.json", "w");
     if (!f) {
-        ESP_LOGE(TAG, "Failed to open config.json for writing");
+        free(out);
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to save config");
         return ESP_FAIL;
     }
 
-    fwrite(buf, 1, cur_len, f);
+    fwrite(out, 1, strlen(out), f);
     fclose(f);
-
-    ESP_LOGI(TAG, "Config saved: %.*s", cur_len, buf);
+    free(out);
 
     httpd_resp_set_type(req, "text/plain");
     httpd_resp_sendstr(req, "OK");

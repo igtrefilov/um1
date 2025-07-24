@@ -20,8 +20,5 @@
 
 void handle_client(int client_sock);
 void tcp_server_task(void *pvParameters);
-void lan_task_rx(void *arg);
-void lan_task_tx(void *arg);
-void start_lan_tasks(QueueHandle_t rx_to_net, QueueHandle_t net_to_tx);
 
 #endif // UM1_LAN_H
