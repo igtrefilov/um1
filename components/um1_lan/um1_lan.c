@@ -247,3 +247,53 @@ void tcp_server_task(void *pvParameters) {
     close(listen_sock);
     vTaskDelete(NULL);
 }
+
+void udp_server_task(void *pvParameters) {
+    esp_netif_ip_info_t *ip_info = (esp_netif_ip_info_t *)pvParameters;
+    int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+    if (sock < 0) {
+        ESP_LOGE(TAG, "Unable to create UDP socket: errno %d", errno);
+        free(ip_info);
+        vTaskDelete(NULL);
+        return;
+    }
+
+    struct sockaddr_in server_addr = {
+        .sin_family = AF_INET,
+        .sin_port = htons(TCP_PORT),
+        .sin_addr.s_addr = ip_info->ip.addr,
+    };
+
+    if (bind(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        ESP_LOGE(TAG, "UDP socket bind failed: errno %d", errno);
+        close(sock);
+        free(ip_info);
+        vTaskDelete(NULL);
+        return;
+    }
+
+    ESP_LOGI(TAG, "UDP server listening on port %d", TCP_PORT);
+
+    char rx_buffer[1024];
+    struct sockaddr_in source_addr;
+    socklen_t socklen = sizeof(source_addr);
+
+    while (1) {
+        int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0,
+                           (struct sockaddr *)&source_addr, &socklen);
+        if (len < 0) {
+            ESP_LOGE(TAG, "recvfrom failed: errno %d", errno);
+            break;
+        }
+
+        rx_buffer[len] = 0;
+        ESP_LOGI(TAG, "Received UDP: '%s' from %s:%d", rx_buffer,
+                 inet_ntoa(source_addr.sin_addr), ntohs(source_addr.sin_port));
+
+        sendto(sock, rx_buffer, len, 0,
+               (struct sockaddr *)&source_addr, sizeof(source_addr));
+    }
+
+    close(sock);
+    vTaskDelete(NULL);
+}

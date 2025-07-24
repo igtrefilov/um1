@@ -18,6 +18,18 @@
 #include "esp_tls.h"
 #include "esp_vfs.h"
 #include "esp_ota_ops.h"
+
+#include "esp_cpu.h"
+#include "esp_flash.h"
+#include "esp_chip_info.h"
+
+#include "esp_mac.h"
+
+#include "esp_timer.h"
+#include "esp_partition.h"
+#include "esp_heap_caps.h"
+#include "spi_flash_mmap.h"
+
 #include <esp_wifi.h>
 #include <esp_http_server.h>
 
@@ -36,6 +48,7 @@ typedef struct {
     bool uart2;
 } ws_subscriber_t;
 
+esp_err_t system_info_handler(httpd_req_t *req);
 esp_err_t handle_get_config(httpd_req_t *req);
 esp_err_t config_save_handler(httpd_req_t *req);
 esp_err_t file_upload_handler(httpd_req_t *req);

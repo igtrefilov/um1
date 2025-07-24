@@ -67,7 +67,11 @@ static void got_ip_event_handler(void *arg, esp_event_base_t event_base,
     }
     *ip_copy = *ip_info;
 
-    xTaskCreate(tcp_server_task, "tcp_server", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
+    if (strcmp(global_lan_config.mode, "udp") == 0) {
+        xTaskCreate(udp_server_task, "udp_server", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
+    } else {
+        xTaskCreate(tcp_server_task, "tcp_server", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
+    }
 }
 
 void start_lan(void)

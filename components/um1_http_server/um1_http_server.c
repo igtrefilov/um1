@@ -10,6 +10,13 @@ static int ota_ws_fd = -1;
 
 static const char *TAG = "http_server";
 
+httpd_uri_t system_info = {
+    .uri       = "/api/system_info",
+    .method    = HTTP_GET,
+    .handler   = system_info_handler,
+    .user_ctx  = NULL
+};
+
 httpd_uri_t config_get_uri = {
     .uri      = "/api/config",
     .method   = HTTP_GET,
@@ -75,6 +82,75 @@ static void remove_subscriber(int fd) {
             break;
         }
     }
+}
+
+esp_err_t system_info_handler(httpd_req_t *req)
+{
+    cJSON *root = cJSON_CreateObject();
+
+    cJSON_AddNumberToObject(root, "cpu_freq_mhz", CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ);
+
+    uint32_t flash_size = 0;
+    esp_flash_get_size(esp_flash_default_chip, &flash_size);
+    cJSON_AddNumberToObject(root, "flash_size_bytes", flash_size);
+
+    cJSON_AddNumberToObject(root, "free_heap", esp_get_free_heap_size());
+    cJSON_AddNumberToObject(root, "internal_free_heap", heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+    cJSON_AddNumberToObject(root, "dram_free_heap", heap_caps_get_free_size(MALLOC_CAP_DMA));
+
+    uint64_t uptime_ms = esp_timer_get_time() / 1000;
+    cJSON_AddNumberToObject(root, "uptime_ms", uptime_ms);
+
+    cJSON_AddStringToObject(root, "sdk_version", esp_get_idf_version());
+
+    const esp_partition_t* running = esp_ota_get_running_partition();
+    if (running) {
+        cJSON_AddStringToObject(root, "running_partition", running->label);
+    }
+
+    esp_chip_info_t chip_info;
+    esp_chip_info(&chip_info);
+    cJSON_AddNumberToObject(root, "cores", chip_info.cores);
+    cJSON_AddNumberToObject(root, "revision", chip_info.revision);
+    cJSON_AddNumberToObject(root, "features", chip_info.features);
+
+    uint8_t mac[6];
+    esp_read_mac(mac, ESP_MAC_WIFI_STA);
+    char mac_str[18];
+    snprintf(mac_str, sizeof(mac_str), "%02X:%02X:%02X:%02X:%02X:%02X",
+             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    cJSON_AddStringToObject(root, "mac_address", mac_str);
+
+    wifi_ap_record_t ap_info;
+    if (esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK) {
+        cJSON_AddNumberToObject(root, "wifi_rssi", ap_info.rssi);
+    }
+
+    esp_partition_iterator_t it = esp_partition_find(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, NULL);
+    if (it) {
+        cJSON *partitions = cJSON_CreateArray();
+        do {
+            const esp_partition_t *p = esp_partition_get(it);
+            if (p) {
+                cJSON *entry = cJSON_CreateObject();
+                cJSON_AddStringToObject(entry, "label", p->label);
+                cJSON_AddNumberToObject(entry, "address", p->address);
+                cJSON_AddNumberToObject(entry, "size", p->size);
+                cJSON_AddItemToArray(partitions, entry);
+            }
+        } while ((it = esp_partition_next(it)) != NULL);
+        cJSON_AddItemToObject(root, "app_partitions", partitions);
+        esp_partition_iterator_release(it);
+    }
+
+    char *out = cJSON_Print(root);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, out);
+
+    free(out);
+    cJSON_Delete(root);
+
+    return ESP_OK;
 }
 
 esp_err_t handle_get_config(httpd_req_t *req)
@@ -498,6 +574,7 @@ httpd_handle_t start_webserver(void)
         ESP_LOGI(TAG, "Registering URI handlers");
 
         httpd_register_uri_handler(server, &ws);
+        httpd_register_uri_handler(server, &system_info);
         httpd_register_uri_handler(server, &config_get_uri);
         httpd_register_uri_handler(server, &config_save);
         httpd_register_uri_handler(server, &upload);
