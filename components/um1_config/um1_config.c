@@ -48,11 +48,15 @@ void read_config_and_apply(void)
         global_wifi_config.enabled = cJSON_GetObjectItem(wifi, "enabled")->valueint;
         strcpy(global_wifi_config.ssid, cJSON_GetObjectItem(wifi, "ssid")->valuestring);
         strcpy(global_wifi_config.password, cJSON_GetObjectItem(wifi, "password")->valuestring);
+        strcpy(global_wifi_config.authmode, cJSON_GetObjectItem(wifi, "authmode")->valuestring);
+        strcpy(global_wifi_config.mode, cJSON_GetObjectItem(wifi, "mode")->valuestring);
 
-        ESP_LOGI("CONFIG", "WiFi config: enabled=%d, ssid=%s, password=%s",
+        ESP_LOGI("CONFIG", "WiFi config: enabled=%d, ssid=%s, password=%s, authmode=%s, mode=%s",
                  global_wifi_config.enabled,
                  global_wifi_config.ssid,
-                 global_wifi_config.password);
+                 global_wifi_config.password,
+				 global_wifi_config.authmode,
+                 global_wifi_config.mode);
     }
 
     cJSON_Delete(root);

@@ -18,6 +18,8 @@ typedef struct {
     bool enabled;
     char ssid[32];
     char password[64];
+    char authmode[16];
+    char mode[8];
 } wifi_config_ap_t;
 
 extern lan_config_t global_lan_config;

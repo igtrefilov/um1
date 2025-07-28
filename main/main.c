@@ -45,7 +45,7 @@ void app_main(void)
     vTaskDelay(pdMS_TO_TICKS(1000));
 	read_config_and_apply();
 
-	start_softap();
+	start_wifi();
 	vTaskDelay(pdMS_TO_TICKS(1000));
 
 	start_lan();
