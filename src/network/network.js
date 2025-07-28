@@ -30,7 +30,10 @@ function toggleWifiFields() {
   const wifiEnabled = document.getElementById('wifi_enabled').checked;
   const wifiFields = [
     'wifi_ssid',
-    'wifi_password'
+    'wifi_password',
+    'wifi_mode',
+    'wifi_authmode',
+    
   ];
 
   wifiFields.forEach(id => {
@@ -64,31 +67,33 @@ function showNotification(message, isError = false) {
 }
 
 function collectSettings() {
-  const settings = {
+  const config = {
     lan: {
-      dhcp: document.getElementById('lan_dhcp').checked,
-      static_ip: document.getElementById('lan_static_ip').value,
-      subnet: document.getElementById('lan_subnet').value,
-      gateway: document.getElementById('lan_gateway').value,
-      mode: document.getElementById('lan_mode').value
+      dhcp: document.getElementById("lan_dhcp").checked,
+      static_ip: document.getElementById("lan_static_ip").value,
+      subnet: document.getElementById("lan_subnet").value,
+      gateway: document.getElementById("lan_gateway").value,
+      mode: document.getElementById("lan_mode").value
     },
     wifi: {
-      enabled: document.getElementById('wifi_enabled').checked,
-      ssid: document.getElementById('wifi_ssid').value,
-      password: document.getElementById('wifi_password').value
-    },
+      enabled: document.getElementById("wifi_enabled").checked,
+      ssid: document.getElementById("wifi_ssid").value,
+      password: document.getElementById("wifi_password").value,
+      authmode: document.getElementById("wifi_authmode").value,
+      mode: document.getElementById("wifi_mode").value
+    }
   };
 
   fetch('/config', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(settings)
+    body: JSON.stringify(config)
   })
   .then(response => {
     if (response.ok) {
-      showNotification('✅ Настройки успешно сохранены');
+      showNotification('✅ Настройки сети сохранены');
     } else {
-      showNotification('❌ Ошибка сохранения', true);
+      showNotification('❌ Ошибка при сохранении настроек', true);
     }
   })
   .catch(err => {
@@ -97,25 +102,23 @@ function collectSettings() {
   });
 }
 
-async function loadConfigFromServer() {
-    try {
-        const response = await fetch('/api/config');
-        const config = await response.json();
+function loadConfigFromServer() {
+  fetch("/config.json")
+    .then(res => res.json())
+    .then(config => {
+      document.getElementById("lan_dhcp").checked = config.lan.dhcp;
+      document.getElementById("lan_static_ip").value = config.lan.static_ip;
+      document.getElementById("lan_subnet").value = config.lan.subnet;
+      document.getElementById("lan_gateway").value = config.lan.gateway;
+      document.getElementById("lan_mode").value = config.lan.mode;
 
-        document.getElementById("lan_dhcp").checked = config.lan.dhcp;
-        document.getElementById("lan_static_ip").value = config.lan.static_ip;
-        document.getElementById("lan_subnet").value = config.lan.subnet;
-        document.getElementById("lan_gateway").value = config.lan.gateway;
-        document.getElementById("lan_mode").value = config.lan.mode;
+      document.getElementById("wifi_enabled").checked = config.wifi.enabled;
+      document.getElementById("wifi_ssid").value = config.wifi.ssid;
+      document.getElementById("wifi_password").value = config.wifi.password;
+      document.getElementById("wifi_authmode").value = config.wifi.authmode;
+      document.getElementById("wifi_mode").value = config.wifi.mode;
 
-        document.getElementById("wifi_enabled").checked = config.wifi.enabled;
-        document.getElementById("wifi_ssid").value = config.wifi.ssid;
-        document.getElementById("wifi_password").value = config.wifi.password;
-
-        toggleLanFields();
-        toggleWifiFields();
-
-    } catch (err) {
-        showNotification("❌ Ошибка загрузки настроек", true);
-    }
+	  toggleLanFields();
+      toggleWifiFields();
+    });
 }

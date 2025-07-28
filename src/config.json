@@ -13,7 +13,9 @@
 	},
 	"wifi":	{
 		"enabled":	true,
+		"mode": "ap",
 		"ssid":	"MyNetwork",
-		"password":	"MyPassword"
+		"password":	"MyPassword",
+		"authmode": "wpa2"
 	}
 }
