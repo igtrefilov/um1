@@ -2,6 +2,7 @@
 
 lan_config_t global_lan_config;
 wifi_config_ap_t global_wifi_config;
+um1_uart_config_t global_uart_config[2];
 
 void read_config_and_apply(void)
 {
@@ -58,6 +59,20 @@ void read_config_and_apply(void)
 				 global_wifi_config.authmode,
                  global_wifi_config.mode);
     }
+
+	cJSON *uart1 = cJSON_GetObjectItem(root, "uart1");
+	if (uart1) {
+		global_uart_config[0].baudrate = cJSON_GetObjectItem(uart1, "baudrate")->valueint;
+		strcpy(global_uart_config[0].parity, cJSON_GetObjectItem(uart1, "parity")->valuestring);
+		global_uart_config[0].stop_bits = cJSON_GetObjectItem(uart1, "stop_bits")->valueint;
+	}
+
+	cJSON *uart2 = cJSON_GetObjectItem(root, "uart2");
+	if (uart2) {
+		global_uart_config[1].baudrate = cJSON_GetObjectItem(uart2, "baudrate")->valueint;
+		strcpy(global_uart_config[1].parity, cJSON_GetObjectItem(uart2, "parity")->valuestring);
+		global_uart_config[1].stop_bits = cJSON_GetObjectItem(uart2, "stop_bits")->valueint;
+	}
 
     cJSON_Delete(root);
     free(data);

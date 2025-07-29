@@ -5,6 +5,7 @@
 #include "driver/gpio.h"
 
 #include "um1_http_server.h"
+#include "um1_config.h"
 
 #define UART1_TXD 2
 #define UART1_RXD 4

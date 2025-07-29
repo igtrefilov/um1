@@ -1,23 +1,28 @@
 #include "um1_uart.h"
 
 void start_uart(void){
-	uart_config_t uart1_config= {
-		        .baud_rate = UART_BAUD_RATE,
-		        .data_bits = UART_DATA_8_BITS,
-		        .parity    = UART_PARITY_EVEN,
-		        .stop_bits = UART_STOP_BITS_1,
-		        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-		        .source_clk = UART_SCLK_DEFAULT,
-		    };
+	um1_uart_config_t uart1_cfg = global_uart_config[0];
+	um1_uart_config_t uart2_cfg = global_uart_config[1];
 
-	uart_config_t uart2_config= {
-			        .baud_rate = UART_BAUD_RATE,
-			        .data_bits = UART_DATA_8_BITS,
-			        .parity    = UART_PARITY_EVEN,
-			        .stop_bits = UART_STOP_BITS_1,
-			        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-			        .source_clk = UART_SCLK_DEFAULT,
-			    };
+	uart_config_t uart1_config = {
+		.baud_rate = uart1_cfg.baudrate,
+		.data_bits = UART_DATA_8_BITS,
+		.parity = strcmp(uart1_cfg.parity, "even") == 0 ? UART_PARITY_EVEN :
+				  strcmp(uart1_cfg.parity, "odd") == 0 ? UART_PARITY_ODD : UART_PARITY_DISABLE,
+		.stop_bits = uart1_cfg.stop_bits == 2 ? UART_STOP_BITS_2 : UART_STOP_BITS_1,
+		.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+		.source_clk = UART_SCLK_DEFAULT
+	};
+
+	uart_config_t uart2_config = {
+		.baud_rate = uart2_cfg.baudrate,
+		.data_bits = UART_DATA_8_BITS,
+		.parity = strcmp(uart2_cfg.parity, "even") == 0 ? UART_PARITY_EVEN :
+				  strcmp(uart2_cfg.parity, "odd") == 0 ? UART_PARITY_ODD : UART_PARITY_DISABLE,
+		.stop_bits = uart2_cfg.stop_bits == 2 ? UART_STOP_BITS_2 : UART_STOP_BITS_1,
+		.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+		.source_clk = UART_SCLK_DEFAULT
+	};
 
 	int intr_alloc_flags = 0;
 

@@ -543,21 +543,6 @@ esp_err_t stop_webserver(httpd_handle_t server)
     return httpd_stop(server);
 }
 
-static void disconnect_handler(void* arg, esp_event_base_t event_base,
-                               int32_t event_id, void* event_data)
-{
-    httpd_handle_t* server = (httpd_handle_t*) arg;
-    if (*server) {
-        ESP_LOGI(TAG, "Stopping webserver");
-        if (stop_webserver(*server) == ESP_OK) {
-            *server = NULL;
-        } else {
-            ESP_LOGE(TAG, "Failed to stop http server");
-        }
-    }
-}
-
-
 httpd_handle_t start_webserver(void)
 {
     httpd_handle_t server = NULL;
@@ -568,7 +553,6 @@ httpd_handle_t start_webserver(void)
     ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
 
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &connect_handler, &server));
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &disconnect_handler, &server));
 
     if (httpd_start(&server, &config) == ESP_OK) {
         ESP_LOGI(TAG, "Registering URI handlers");
