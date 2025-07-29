@@ -12,31 +12,36 @@
 		<div class="content">
 			<div id="notif" class="notification" style="display:none;"></div>
 
-			<h3>UART</h3>
+			<h3>UART 1</h3>
 			<table class="settings-table">
-			  <tr>
-				<td>Baudrate:</td>
-				<td><input type="number" id="uart_baudrate" value="115200"></td>
-			  </tr>
-			  <tr>
-				<td>Parity:</td>
-				<td>
-				  <select id="uart_parity">
-					<option value="none">None</option>
-					<option value="even">Even</option>
-					<option value="odd">Odd</option>
-				  </select>
-				</td>
-			  </tr>
-			  <tr>
-				<td>Stop Bits:</td>
-				<td>
-				  <select id="uart_stop_bits">
-					<option value="1">1</option>
+			  <tr><td>Baudrate:</td><td><input type="number" id="uart1_baudrate"></td></tr>
+			  <tr><td>Parity:</td>
+				  <td><select id="uart1_parity">
+					  <option value="none">None</option>
+					  <option value="even">Even</option>
+					  <option value="odd">Odd</option>
+				  </select></td></tr>
+			  <tr><td>Stop Bits:</td>
+				  <td><select id="uart1_stop_bits">
+					  <option value="1">1</option>
+					  <option value="2">2</option>
+				  </select></td></tr>
+			</table>
+
+			<h3>UART 2</h3>
+			<table class="settings-table">
+			  <tr><td>Baudrate:</td><td><input type="number" id="uart2_baudrate"></td></tr>
+			  <tr><td>Parity:</td>
+				  <td><select id="uart2_parity">...
+				  	  <option value="none">None</option>
+					  <option value="even">Even</option>
+					  <option value="odd">Odd</option>
+				  </select></td></tr>
+			  <tr><td>Stop Bits:</td>
+				  <td><select id="uart2_stop_bits">
+				  	<option value="1">1</option>
 					<option value="2">2</option>
-				  </select>
-				</td>
-			  </tr>
+				  </select></td></tr>
 			</table>
 
 			<br>

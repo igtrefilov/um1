@@ -20,11 +20,16 @@ function showNotification(message, isError = false) {
 
 function collectSettings() {
   const settings = {
-    uart: {
-      baudrate: parseInt(document.getElementById('uart_baudrate').value),
-      parity: document.getElementById('uart_parity').value,
-      stop_bits: parseInt(document.getElementById('uart_stop_bits').value)
-    }
+	  uart1: {
+		baudrate: parseInt(document.getElementById('uart1_baudrate').value),
+		parity: document.getElementById('uart1_parity').value,
+		stop_bits: parseInt(document.getElementById('uart1_stop_bits').value)
+	  },
+	  uart2: {
+		baudrate: parseInt(document.getElementById('uart2_baudrate').value),
+		parity: document.getElementById('uart2_parity').value,
+		stop_bits: parseInt(document.getElementById('uart2_stop_bits').value)
+	  }
   };
 
   fetch('/config', {
@@ -50,9 +55,13 @@ async function loadConfigFromServer() {
         const response = await fetch('/api/config');
         const config = await response.json();
 
-        document.getElementById("uart_baudrate").value = config.uart.baudrate;
-        document.getElementById("uart_parity").value = config.uart.parity;
-        document.getElementById("uart_stop_bits").value = config.uart.stop_bits;
+        document.getElementById("uart1_baudrate").value = config.uart1.baudrate;
+		document.getElementById("uart1_parity").value = config.uart1.parity;
+		document.getElementById("uart1_stop_bits").value = config.uart1.stop_bits;
+
+		document.getElementById("uart2_baudrate").value = config.uart2.baudrate;
+		document.getElementById("uart2_parity").value = config.uart2.parity;
+		document.getElementById("uart2_stop_bits").value = config.uart2.stop_bits;
 
     } catch (err) {
         showNotification("❌ Ошибка загрузки настроек", true);
