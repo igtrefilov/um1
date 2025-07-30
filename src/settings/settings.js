@@ -18,6 +18,21 @@ function showNotification(message, isError = false) {
   }, 3000);
 }
 
+function toggleLanFields() {
+  const mqttEnabled = document.getElementById('mqtt_enabled').checked;
+  const fieldsToToggle = [
+    'mqtt_broker',
+    'mqtt_username',
+    'mqtt_password',
+    'mqtt_tx_enabled'
+  ];
+
+  fieldsToToggle.forEach(id => {
+    const el = document.getElementById(id);
+    el.disabled = !mqttEnabled;
+  });
+}
+
 function collectSettings() {
   const settings = {
 	  uart1: {
@@ -75,8 +90,15 @@ async function loadConfigFromServer() {
 		document.getElementById("mqtt_username").value = config.mqtt.username;
 		document.getElementById("mqtt_password").value = config.mqtt.password;
 		document.getElementById("mqtt_tx_enabled").checked = config.mqtt.tx_enabled;
+		
+		toggleLanFields();
 
     } catch (err) {
         showNotification("❌ Ошибка загрузки настроек", true);
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('mqtt_enabled').addEventListener('change', toggleLanFields);
+  toggleLanFields();
+});
