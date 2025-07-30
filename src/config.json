@@ -22,5 +22,12 @@
 		"ssid":	"MyNetwork",
 		"password":	"MyPassword",
 		"authmode": "wpa2"
+	},
+	"mqtt": {
+		"enabled": true,
+		"broker": "mqtt://uhcloud.ru",
+		"username": "igtrefilov",
+		"password": "estrella",
+		"tx_enabled": true
 	}
 }

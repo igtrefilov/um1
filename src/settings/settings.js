@@ -29,7 +29,14 @@ function collectSettings() {
 		baudrate: parseInt(document.getElementById('uart2_baudrate').value),
 		parity: document.getElementById('uart2_parity').value,
 		stop_bits: parseInt(document.getElementById('uart2_stop_bits').value)
-	  }
+	  },
+	  mqtt: {
+		  enabled: document.getElementById("mqtt_enabled").checked,
+		  broker: document.getElementById("mqtt_broker").value,
+		  username: document.getElementById("mqtt_username").value,
+		  password: document.getElementById("mqtt_password").value,
+		  tx_enabled: document.getElementById("mqtt_tx_enabled").checked
+		}
   };
 
   fetch('/config', {
@@ -62,6 +69,12 @@ async function loadConfigFromServer() {
 		document.getElementById("uart2_baudrate").value = config.uart2.baudrate;
 		document.getElementById("uart2_parity").value = config.uart2.parity;
 		document.getElementById("uart2_stop_bits").value = config.uart2.stop_bits;
+
+		document.getElementById("mqtt_enabled").checked = config.mqtt.enabled;
+		document.getElementById("mqtt_broker").value = config.mqtt.broker;
+		document.getElementById("mqtt_username").value = config.mqtt.username;
+		document.getElementById("mqtt_password").value = config.mqtt.password;
+		document.getElementById("mqtt_tx_enabled").checked = config.mqtt.tx_enabled;
 
     } catch (err) {
         showNotification("❌ Ошибка загрузки настроек", true);

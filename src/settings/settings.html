@@ -43,7 +43,16 @@
 					<option value="2">2</option>
 				  </select></td></tr>
 			</table>
-
+			
+			<h3>MQTT</h3>
+			<table class="settings-table">
+			  <tr><td>Enabled:</td><td><input type="checkbox" id="mqtt_enabled"></td></tr>
+			  <tr><td>Broker URL:</td><td><input type="text" id="mqtt_broker"></td></tr>
+			  <tr><td>Username:</td><td><input type="text" id="mqtt_username"></td></tr>
+			  <tr><td>Password:</td><td><input type="password" id="mqtt_password"></td></tr>
+			  <tr><td>TX enabled:</td><td><input type="checkbox" id="mqtt_tx_enabled"></td></tr>
+			</table>
+			
 			<br>
 			<button onclick="collectSettings()">Сохранить настройки</button>
 			<pre id="json_output"></pre>
