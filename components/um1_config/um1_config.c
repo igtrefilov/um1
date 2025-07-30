@@ -4,6 +4,8 @@ lan_config_t global_lan_config;
 wifi_config_ap_t global_wifi_config;
 um1_uart_config_t global_uart_config[2];
 mqtt_config_t global_mqtt_config;
+stream_config_t global_tcp_config;
+stream_config_t global_udp_config;
 
 void read_config_and_apply(void)
 {
@@ -35,14 +37,12 @@ void read_config_and_apply(void)
         strcpy(global_lan_config.static_ip, cJSON_GetObjectItem(lan, "static_ip")->valuestring);
         strcpy(global_lan_config.subnet, cJSON_GetObjectItem(lan, "subnet")->valuestring);
         strcpy(global_lan_config.gateway, cJSON_GetObjectItem(lan, "gateway")->valuestring);
-        strcpy(global_lan_config.mode, cJSON_GetObjectItem(lan, "mode")->valuestring);
 
-        ESP_LOGI("CONFIG", "LAN config: dhcp=%d, ip=%s, subnet=%s, gateway=%s, mode=%s",
+        ESP_LOGI("CONFIG", "LAN config: dhcp=%d, ip=%s, subnet=%s, gateway=%s",
                  global_lan_config.dhcp,
                  global_lan_config.static_ip,
                  global_lan_config.subnet,
-                 global_lan_config.gateway,
-                 global_lan_config.mode);
+                 global_lan_config.gateway);
     }
 
     cJSON *wifi = cJSON_GetObjectItem(root, "wifi");
@@ -88,6 +88,19 @@ void read_config_and_apply(void)
 	             global_mqtt_config.broker,
 	             global_mqtt_config.username,
 	             global_mqtt_config.tx_enabled);
+	}
+	cJSON *tcp = cJSON_GetObjectItem(root, "tcp");
+	if (tcp) {
+	    global_tcp_config.enabled = cJSON_GetObjectItem(tcp, "enabled")->valueint;
+	    strcpy(global_tcp_config.server, cJSON_GetObjectItem(tcp, "server")->valuestring);
+	    global_tcp_config.port = cJSON_GetObjectItem(tcp, "port")->valueint;
+	}
+
+	cJSON *udp = cJSON_GetObjectItem(root, "udp");
+	if (udp) {
+	    global_udp_config.enabled = cJSON_GetObjectItem(udp, "enabled")->valueint;
+	    strcpy(global_udp_config.server, cJSON_GetObjectItem(udp, "server")->valuestring);
+	    global_udp_config.port = cJSON_GetObjectItem(udp, "port")->valueint;
 	}
 
     cJSON_Delete(root);

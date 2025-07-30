@@ -67,11 +67,7 @@ static void got_ip_event_handler(void *arg, esp_event_base_t event_base,
     }
     *ip_copy = *ip_info;
 
-    if (strcmp(global_lan_config.mode, "udp") == 0) {
-        xTaskCreate(udp_server_task, "udp_server", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
-    } else {
-        xTaskCreate(tcp_server_task, "tcp_server", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
-    }
+	xTaskCreate(tcp_server_task, "tcp_server", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
 }
 
 void start_lan(void)
@@ -86,7 +82,6 @@ void start_lan(void)
     bool use_static_ip = !global_lan_config.dhcp;
     esp_netif_ip_info_t ip_info;
 
-    use_static_ip = 0;
     if (use_static_ip) {
         memset(&ip_info, 0, sizeof(ip_info));
         ip_info.ip.addr = inet_addr(global_lan_config.static_ip);

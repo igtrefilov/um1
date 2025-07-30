@@ -23,4 +23,5 @@
 void start_uart(void);
 void uart1_task(void *arg);
 void uart2_task(void *arg);
-
+void send_tcp_packet(const char *host, int port, int uart_port, const uint8_t *data, size_t len);
+void send_udp_packet(const char *host, int port, int uart_port, const uint8_t *data, size_t len);

@@ -50,10 +50,16 @@ void uart1_task(void *arg) {
         int len = uart_read_bytes(UART_PORT_NUM_1, uart_buffer, BUF_SIZE - 1, 1 / portTICK_PERIOD_MS);
         if (len > 0) {
         	send_uart_ws_data(UART_PORT_NUM_1, uart_buffer, len);
-        	/*esp_mqtt_client_handle_t client = get_mqtt_client_handle();
+        	if (global_tcp_config.enabled) {
+        	    send_tcp_packet(global_tcp_config.server, global_tcp_config.port, UART_PORT_NUM_1, uart_buffer, len);
+        	}
+        	if (global_udp_config.enabled) {
+        	    send_udp_packet(global_udp_config.server, global_udp_config.port, UART_PORT_NUM_1, uart_buffer, len);
+        	}
+        	esp_mqtt_client_handle_t client = get_mqtt_client_handle();
         	if (client != NULL && global_mqtt_config.tx_enabled) {
         	    esp_mqtt_client_publish(client, "uart/1", (const char *)uart_buffer, len, 1, 0);
-        	}*/
+        	}
         }
         vTaskDelay(1);
     }
@@ -73,10 +79,16 @@ void uart2_task(void *arg) {
         int len = uart_read_bytes(UART_PORT_NUM_2, uart_buffer, BUF_SIZE - 1, 1 / portTICK_PERIOD_MS);
         if (len > 0) {
         	send_uart_ws_data(UART_PORT_NUM_2, uart_buffer, len);
-        	/*esp_mqtt_client_handle_t client = get_mqtt_client_handle();
+        	if (global_tcp_config.enabled) {
+        	        	    send_tcp_packet(global_tcp_config.server, global_tcp_config.port, UART_PORT_NUM_2, uart_buffer, len);
+			}
+			if (global_udp_config.enabled) {
+				send_udp_packet(global_udp_config.server, global_udp_config.port, UART_PORT_NUM_2, uart_buffer, len);
+			}
+        	esp_mqtt_client_handle_t client = get_mqtt_client_handle();
         	if (client != NULL && global_mqtt_config.tx_enabled) {
         	    esp_mqtt_client_publish(client, "uart/2", (const char *)uart_buffer, len, 1, 0);
-        	}*/
+        	}
         }
         vTaskDelay(1);
     }
@@ -85,3 +97,41 @@ void uart2_task(void *arg) {
     vTaskDelete(NULL);
 }
 
+void send_tcp_packet(const char *host, int port, int uart_port, const uint8_t *data, size_t len) {
+    struct sockaddr_in dest;
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) return;
+
+    dest.sin_family = AF_INET;
+    dest.sin_port = htons(port);
+    inet_pton(AF_INET, host, &dest.sin_addr);
+
+    if (connect(sock, (struct sockaddr *)&dest, sizeof(dest)) != 0) {
+        close(sock);
+        return;
+    }
+
+    char buffer[BUF_SIZE + 16];
+    int offset = snprintf(buffer, sizeof(buffer), "uart%d:", uart_port);
+    if (offset + len > sizeof(buffer)) len = sizeof(buffer) - offset;
+    memcpy(buffer + offset, data, len);
+    send(sock, buffer, offset + len, 0);
+    close(sock);
+}
+
+void send_udp_packet(const char *host, int port, int uart_port, const uint8_t *data, size_t len) {
+    struct sockaddr_in dest;
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) return;
+
+    dest.sin_family = AF_INET;
+    dest.sin_port = htons(port);
+    inet_pton(AF_INET, host, &dest.sin_addr);
+
+    char buffer[BUF_SIZE + 16];
+    int offset = snprintf(buffer, sizeof(buffer), "uart%d:", uart_port);
+    if (offset + len > sizeof(buffer)) len = sizeof(buffer) - offset;
+    memcpy(buffer + offset, data, len);
+    sendto(sock, buffer, offset + len, 0, (struct sockaddr *)&dest, sizeof(dest));
+    close(sock);
+}
