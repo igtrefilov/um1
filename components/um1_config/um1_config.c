@@ -3,6 +3,7 @@
 lan_config_t global_lan_config;
 wifi_config_ap_t global_wifi_config;
 um1_uart_config_t global_uart_config[2];
+mqtt_config_t global_mqtt_config;
 
 void read_config_and_apply(void)
 {
@@ -72,6 +73,21 @@ void read_config_and_apply(void)
 		global_uart_config[1].baudrate = cJSON_GetObjectItem(uart2, "baudrate")->valueint;
 		strcpy(global_uart_config[1].parity, cJSON_GetObjectItem(uart2, "parity")->valuestring);
 		global_uart_config[1].stop_bits = cJSON_GetObjectItem(uart2, "stop_bits")->valueint;
+	}
+
+	cJSON *mqtt = cJSON_GetObjectItem(root, "mqtt");
+	if (mqtt) {
+	    global_mqtt_config.enabled = cJSON_GetObjectItem(mqtt, "enabled")->valueint;
+	    global_mqtt_config.tx_enabled = cJSON_GetObjectItem(mqtt, "tx_enabled")->valueint;
+	    strcpy(global_mqtt_config.broker, cJSON_GetObjectItem(mqtt, "broker")->valuestring);
+	    strcpy(global_mqtt_config.username, cJSON_GetObjectItem(mqtt, "username")->valuestring);
+	    strcpy(global_mqtt_config.password, cJSON_GetObjectItem(mqtt, "password")->valuestring);
+
+	    ESP_LOGI("CONFIG", "MQTT: enabled=%d, broker=%s, user=%s, tx_enabled=%d",
+	             global_mqtt_config.enabled,
+	             global_mqtt_config.broker,
+	             global_mqtt_config.username,
+	             global_mqtt_config.tx_enabled);
 	}
 
     cJSON_Delete(root);

@@ -195,6 +195,16 @@ void handle_client(int client_sock) {
     close(client_sock);
 }
 
+void handle_client_task(void *pvParameters) {
+    int client_sock = *((int *)pvParameters);
+    free(pvParameters);
+
+    handle_client(client_sock);
+
+    close(client_sock);
+    vTaskDelete(NULL);
+}
+
 void tcp_server_task(void *pvParameters) {
     esp_netif_ip_info_t *ip_info = (esp_netif_ip_info_t *)pvParameters;
     int listen_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
@@ -240,8 +250,14 @@ void tcp_server_task(void *pvParameters) {
         }
 
         ESP_LOGI(TAG, "Accepted connection from %s:%d", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
-        handle_client(client_sock);
-        close(client_sock);
+        int *pclient = malloc(sizeof(int));
+        if (pclient == NULL) {
+            ESP_LOGE(TAG, "Failed to allocate memory for client socket");
+            close(client_sock);
+            continue;
+        }
+        *pclient = client_sock;
+        xTaskCreate(handle_client_task, "handle_client_task", 4096, pclient, 5, NULL);
     }
 
     close(listen_sock);

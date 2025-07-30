@@ -23,6 +23,7 @@
 #include "um1_http_server.h"
 #include "um1_spiffs.h"
 #include "um1_config.h"
+#include "um1_mqtt.h"
 
 void init_esp_environment(void)
 {
@@ -55,6 +56,9 @@ void app_main(void)
 	vTaskDelay(pdMS_TO_TICKS(1000));
 
 	start_uart();
+	vTaskDelay(pdMS_TO_TICKS(1000));
+
+	start_mqtt();
 
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(1000));

@@ -35,8 +35,8 @@ void start_uart(void){
 	ESP_ERROR_CHECK(uart_set_pin(UART_PORT_NUM_1, UART1_TXD, UART1_RXD, -1, -1));
 	ESP_ERROR_CHECK(uart_set_pin(UART_PORT_NUM_2, UART2_TXD, UART2_RXD, -1, -1));
 
-	xTaskCreate(&uart1_task, "uart1_task", 4096, NULL, 5, NULL);
-	xTaskCreate(&uart2_task, "uart2_task", 4096, NULL, 5, NULL);
+	xTaskCreate(&uart1_task, "uart1_task", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
+	xTaskCreate(&uart2_task, "uart2_task", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
 }
 
 void uart1_task(void *arg) {
@@ -50,6 +50,10 @@ void uart1_task(void *arg) {
         int len = uart_read_bytes(UART_PORT_NUM_1, uart_buffer, BUF_SIZE - 1, 1 / portTICK_PERIOD_MS);
         if (len > 0) {
         	send_uart_ws_data(UART_PORT_NUM_1, uart_buffer, len);
+        	/*esp_mqtt_client_handle_t client = get_mqtt_client_handle();
+        	if (client != NULL && global_mqtt_config.tx_enabled) {
+        	    esp_mqtt_client_publish(client, "uart/1", (const char *)uart_buffer, len, 1, 0);
+        	}*/
         }
         vTaskDelay(1);
     }
@@ -69,6 +73,10 @@ void uart2_task(void *arg) {
         int len = uart_read_bytes(UART_PORT_NUM_2, uart_buffer, BUF_SIZE - 1, 1 / portTICK_PERIOD_MS);
         if (len > 0) {
         	send_uart_ws_data(UART_PORT_NUM_2, uart_buffer, len);
+        	/*esp_mqtt_client_handle_t client = get_mqtt_client_handle();
+        	if (client != NULL && global_mqtt_config.tx_enabled) {
+        	    esp_mqtt_client_publish(client, "uart/2", (const char *)uart_buffer, len, 1, 0);
+        	}*/
         }
         vTaskDelay(1);
     }

@@ -28,9 +28,18 @@ typedef struct {
     int stop_bits;
 } um1_uart_config_t;
 
+typedef struct {
+    bool enabled;
+    char broker[64];
+    char username[32];
+    char password[32];
+    bool tx_enabled;
+} mqtt_config_t;
+
 extern lan_config_t global_lan_config;
 extern wifi_config_ap_t global_wifi_config;
 extern um1_uart_config_t global_uart_config[2];
+extern mqtt_config_t global_mqtt_config;
 
 void read_config_and_apply(void);
 
