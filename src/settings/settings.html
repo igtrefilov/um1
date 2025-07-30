@@ -53,6 +53,17 @@
 			  <tr><td>TX enabled:</td><td><input type="checkbox" id="mqtt_tx_enabled"></td></tr>
 			</table>
 			
+			<h3>TCP/UDP</h3>
+			<table class="settings-table">
+			  <tr><td>TCP Enabled:</td><td><input type="checkbox" id="tcp_enabled"></td></tr>
+			  <tr><td>TCP Server:</td><td><input type="text" id="tcp_server" placeholder="example.com or IP"></td></tr>
+			  <tr><td>TCP Port:</td><td><input type="number" id="tcp_port" placeholder="1234"></td></tr>
+
+			  <tr><td>UDP Enabled:</td><td><input type="checkbox" id="udp_enabled"></td></tr>
+			  <tr><td>UDP Server:</td><td><input type="text" id="udp_server" placeholder="example.com or IP"></td></tr>
+			  <tr><td>UDP Port:</td><td><input type="number" id="udp_port" placeholder="1234"></td></tr>
+			</table>
+			
 			<br>
 			<button onclick="collectSettings()">Сохранить настройки</button>
 			<pre id="json_output"></pre>

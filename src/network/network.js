@@ -73,7 +73,6 @@ function collectSettings() {
       static_ip: document.getElementById("lan_static_ip").value,
       subnet: document.getElementById("lan_subnet").value,
       gateway: document.getElementById("lan_gateway").value,
-      mode: document.getElementById("lan_mode").value
     },
     wifi: {
       enabled: document.getElementById("wifi_enabled").checked,
@@ -110,7 +109,6 @@ function loadConfigFromServer() {
       document.getElementById("lan_static_ip").value = config.lan.static_ip;
       document.getElementById("lan_subnet").value = config.lan.subnet;
       document.getElementById("lan_gateway").value = config.lan.gateway;
-      document.getElementById("lan_mode").value = config.lan.mode;
 
       document.getElementById("wifi_enabled").checked = config.wifi.enabled;
       document.getElementById("wifi_ssid").value = config.wifi.ssid;

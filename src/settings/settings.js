@@ -18,18 +18,39 @@ function showNotification(message, isError = false) {
   }, 3000);
 }
 
-function toggleLanFields() {
+function toggleFields() {
   const mqttEnabled = document.getElementById('mqtt_enabled').checked;
-  const fieldsToToggle = [
+  const tcpEnabled = document.getElementById('tcp_enabled').checked;
+  const udpEnabled = document.getElementById('udp_enabled').checked;
+
+  const fieldsMqttToToggle = [
     'mqtt_broker',
     'mqtt_username',
     'mqtt_password',
     'mqtt_tx_enabled'
   ];
+  const fieldsTcpToToggle = [
+    'tcp_server',
+    'tcp_port'
+  ];
+  const fieldsUdpToToggle = [
+    'udp_server',
+    'udp_port'
+  ];
 
-  fieldsToToggle.forEach(id => {
+  fieldsMqttToToggle.forEach(id => {
     const el = document.getElementById(id);
-    el.disabled = !mqttEnabled;
+    if (el) el.disabled = !mqttEnabled;
+  });
+
+  fieldsTcpToToggle.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !tcpEnabled;
+  });
+
+  fieldsUdpToToggle.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !udpEnabled;
   });
 }
 
@@ -51,7 +72,17 @@ function collectSettings() {
 		  username: document.getElementById("mqtt_username").value,
 		  password: document.getElementById("mqtt_password").value,
 		  tx_enabled: document.getElementById("mqtt_tx_enabled").checked
-		}
+		},
+	tcp: {
+	  enabled: document.getElementById("tcp_enabled").checked,
+	  server: document.getElementById("tcp_server").value,
+	  port: parseInt(document.getElementById("tcp_port").value)
+	},
+	udp: {
+	  enabled: document.getElementById("udp_enabled").checked,
+	  server: document.getElementById("udp_server").value,
+	  port: parseInt(document.getElementById("udp_port").value)
+	}	
   };
 
   fetch('/config', {
@@ -91,7 +122,15 @@ async function loadConfigFromServer() {
 		document.getElementById("mqtt_password").value = config.mqtt.password;
 		document.getElementById("mqtt_tx_enabled").checked = config.mqtt.tx_enabled;
 		
-		toggleLanFields();
+		document.getElementById("tcp_enabled").checked = config.tcp.enabled;
+		document.getElementById("tcp_server").value = config.tcp.server;
+		document.getElementById("tcp_port").value = config.tcp.port;
+
+		document.getElementById("udp_enabled").checked = config.udp.enabled;
+		document.getElementById("udp_server").value = config.udp.server;
+		document.getElementById("udp_port").value = config.udp.port;
+		
+		toggleFields();
 
     } catch (err) {
         showNotification("❌ Ошибка загрузки настроек", true);
@@ -99,6 +138,8 @@ async function loadConfigFromServer() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('mqtt_enabled').addEventListener('change', toggleLanFields);
-  toggleLanFields();
+  document.getElementById('mqtt_enabled').addEventListener('change', toggleFields);
+  document.getElementById('tcp_enabled').addEventListener('change', toggleFields);
+  document.getElementById('udp_enabled').addEventListener('change', toggleFields);
+  toggleFields();
 });

@@ -13,8 +13,7 @@
 		"dhcp":	true,
 		"static_ip":	"192.168.0.100",
 		"subnet":	"255.255.255.0",
-		"gateway":	"192.168.0.1",
-		"mode":	"tcp"
+		"gateway":	"192.168.0.1"
 	},
 	"wifi":	{
 		"enabled":	true,
@@ -29,5 +28,15 @@
 		"username": "igtrefilov",
 		"password": "estrella",
 		"tx_enabled": true
-	}
+	},
+  "tcp": {
+    "enabled": true,
+    "server": "192.168.1.100",
+    "port": 1234
+  },
+  "udp": {
+    "enabled": false,
+    "server": "",
+    "port": 0
+  }
 }
