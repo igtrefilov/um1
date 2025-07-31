@@ -38,5 +38,10 @@
     "enabled": false,
     "server": "",
     "port": 0
-  }
+  },
+	"sntp": {
+	  "enabled": true,
+	  "server_ip": "pool.ntp.org",
+	  "sync_interval_sec": 3600
+	}
 }

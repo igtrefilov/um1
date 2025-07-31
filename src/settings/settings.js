@@ -18,39 +18,32 @@ function showNotification(message, isError = false) {
   }, 3000);
 }
 
-function toggleFields() {
-  const mqttEnabled = document.getElementById('mqtt_enabled').checked;
-  const tcpEnabled = document.getElementById('tcp_enabled').checked;
-  const udpEnabled = document.getElementById('udp_enabled').checked;
-
-  const fieldsMqttToToggle = [
-    'mqtt_broker',
-    'mqtt_username',
-    'mqtt_password',
-    'mqtt_tx_enabled'
+function toggleAllFields() {
+  const toggles = [
+    {
+      enabledId: 'mqtt_enabled',
+      fieldIds: ['mqtt_broker', 'mqtt_username', 'mqtt_password', 'mqtt_tx_enabled']
+    },
+    {
+      enabledId: 'tcp_enabled',
+      fieldIds: ['tcp_server', 'tcp_port']
+    },
+    {
+      enabledId: 'udp_enabled',
+      fieldIds: ['udp_server', 'udp_port']
+    },
+    {
+      enabledId: 'sntp_enabled',
+      fieldIds: ['sntp_server_ip', 'sntp_interval']
+    }
   ];
-  const fieldsTcpToToggle = [
-    'tcp_server',
-    'tcp_port'
-  ];
-  const fieldsUdpToToggle = [
-    'udp_server',
-    'udp_port'
-  ];
 
-  fieldsMqttToToggle.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = !mqttEnabled;
-  });
-
-  fieldsTcpToToggle.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = !tcpEnabled;
-  });
-
-  fieldsUdpToToggle.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = !udpEnabled;
+  toggles.forEach(group => {
+    const isEnabled = document.getElementById(group.enabledId).checked;
+    group.fieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = !isEnabled;
+    });
   });
 }
 
@@ -82,6 +75,11 @@ function collectSettings() {
 	  enabled: document.getElementById("udp_enabled").checked,
 	  server: document.getElementById("udp_server").value,
 	  port: parseInt(document.getElementById("udp_port").value)
+	},
+	sntp: {
+	  enabled: document.getElementById("sntp_enabled").checked,
+	  server_ip: document.getElementById("sntp_server_ip").value,
+	  sync_interval_sec: parseInt(document.getElementById("sntp_interval").value)
 	}	
   };
 
@@ -130,7 +128,11 @@ async function loadConfigFromServer() {
 		document.getElementById("udp_server").value = config.udp.server;
 		document.getElementById("udp_port").value = config.udp.port;
 		
-		toggleFields();
+		document.getElementById("sntp_enabled").checked = config.sntp.enabled;
+		document.getElementById("sntp_server_ip").value = config.sntp.server_ip;
+		document.getElementById("sntp_interval").value = config.sntp.sync_interval_sec;
+		
+		toggleAllFields();
 
     } catch (err) {
         showNotification("❌ Ошибка загрузки настроек", true);
@@ -138,8 +140,8 @@ async function loadConfigFromServer() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('mqtt_enabled').addEventListener('change', toggleFields);
-  document.getElementById('tcp_enabled').addEventListener('change', toggleFields);
-  document.getElementById('udp_enabled').addEventListener('change', toggleFields);
-  toggleFields();
+  ['mqtt_enabled', 'tcp_enabled', 'udp_enabled', 'sntp_enabled'].forEach(id => {
+    document.getElementById(id).addEventListener('change', toggleAllFields);
+  });
+  toggleAllFields();
 });

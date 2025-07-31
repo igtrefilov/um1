@@ -64,6 +64,22 @@
 			  <tr><td>UDP Port:</td><td><input type="number" id="udp_port" placeholder="1234"></td></tr>
 			</table>
 			
+			<h3>SNTP</h3>
+			<table class="settings-table">
+			  <tr>
+				<td>Enabled:</td>
+				<td><input type="checkbox" id="sntp_enabled" onchange="toggleSntpFields()"></td>
+			  </tr>
+			  <tr>
+				<td>Server IP:</td>
+				<td><input type="text" id="sntp_server_ip"></td>
+			  </tr>
+			  <tr>
+				<td>Sync Interval (sec):</td>
+				<td><input type="number" id="sntp_interval"></td>
+			  </tr>
+			</table>
+			
 			<br>
 			<button onclick="collectSettings()">Сохранить настройки</button>
 			<pre id="json_output"></pre>
