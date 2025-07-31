@@ -493,7 +493,7 @@ esp_err_t ws_control_handler(httpd_req_t *req) {
 
 void send_uart_ws_data(int uart_port, const uint8_t *data, size_t len) {
     const char *prefix = uart_port == UART_PORT_NUM_1 ? "uart1:" : "uart2:";
-    char msg[128];
+    char msg[1024];
     for (size_t i = 0; i < subs_count; ++i) {
         bool enabled = (uart_port == UART_PORT_NUM_1) ? subscribers[i].uart1 : subscribers[i].uart2;
         if (!enabled) continue;

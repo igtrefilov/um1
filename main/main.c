@@ -24,6 +24,7 @@
 #include "um1_spiffs.h"
 #include "um1_config.h"
 #include "um1_mqtt.h"
+#include "um1_sntp.h"
 
 void init_esp_environment(void)
 {
@@ -59,6 +60,9 @@ void app_main(void)
 	vTaskDelay(pdMS_TO_TICKS(1000));
 
 	start_mqtt();
+	vTaskDelay(pdMS_TO_TICKS(1000));
+
+	start_sntp();
 
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(1000));

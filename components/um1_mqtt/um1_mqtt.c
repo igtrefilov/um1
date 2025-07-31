@@ -1,6 +1,6 @@
 #include "um1_mqtt.h"
 
-const char *TAG = "um1_mqtt";
+static const char *TAG = "um1_mqtt";
 esp_mqtt_client_handle_t global_mqtt_client = NULL;
 extern mqtt_config_t global_mqtt_config;
 

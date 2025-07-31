@@ -1,5 +1,7 @@
 #include "um1_uart.h"
 
+static const char *TAG = "um1_uart";
+
 void start_uart(void){
 	um1_uart_config_t uart1_cfg = global_uart_config[0];
 	um1_uart_config_t uart2_cfg = global_uart_config[1];
@@ -49,17 +51,7 @@ void uart1_task(void *arg) {
     while (1) {
         int len = uart_read_bytes(UART_PORT_NUM_1, uart_buffer, BUF_SIZE - 1, 1 / portTICK_PERIOD_MS);
         if (len > 0) {
-        	send_uart_ws_data(UART_PORT_NUM_1, uart_buffer, len);
-        	if (global_tcp_config.enabled) {
-        	    send_tcp_packet(global_tcp_config.server, global_tcp_config.port, UART_PORT_NUM_1, uart_buffer, len);
-        	}
-        	if (global_udp_config.enabled) {
-        	    send_udp_packet(global_udp_config.server, global_udp_config.port, UART_PORT_NUM_1, uart_buffer, len);
-        	}
-        	esp_mqtt_client_handle_t client = get_mqtt_client_handle();
-        	if (client != NULL && global_mqtt_config.tx_enabled) {
-        	    esp_mqtt_client_publish(client, "uart/1", (const char *)uart_buffer, len, 1, 0);
-        	}
+        	send_uart_packet_with_timestamp(UART_PORT_NUM_1, uart_buffer, len);
         }
         vTaskDelay(1);
     }
@@ -78,23 +70,60 @@ void uart2_task(void *arg) {
     while (1) {
         int len = uart_read_bytes(UART_PORT_NUM_2, uart_buffer, BUF_SIZE - 1, 1 / portTICK_PERIOD_MS);
         if (len > 0) {
-        	send_uart_ws_data(UART_PORT_NUM_2, uart_buffer, len);
-        	if (global_tcp_config.enabled) {
-        	        	    send_tcp_packet(global_tcp_config.server, global_tcp_config.port, UART_PORT_NUM_2, uart_buffer, len);
-			}
-			if (global_udp_config.enabled) {
-				send_udp_packet(global_udp_config.server, global_udp_config.port, UART_PORT_NUM_2, uart_buffer, len);
-			}
-        	esp_mqtt_client_handle_t client = get_mqtt_client_handle();
-        	if (client != NULL && global_mqtt_config.tx_enabled) {
-        	    esp_mqtt_client_publish(client, "uart/2", (const char *)uart_buffer, len, 1, 0);
+        	printf("uart: ");
+        	for (int i = 0; i < len; i++) {
+        	    printf("%02X ", uart_buffer[i]);
         	}
+        	printf("\n");
+        	send_uart_packet_with_timestamp(UART_PORT_NUM_2, uart_buffer, len);
         }
         vTaskDelay(1);
     }
 
     free(uart_buffer);
     vTaskDelete(NULL);
+}
+
+void send_uart_packet_with_timestamp(int uart_port, const uint8_t *data, size_t len) {
+    uint8_t extended_buffer[BUF_SIZE + sizeof(uint64_t)];
+    size_t offset = 0;
+
+    if (is_sntp_enabled()) {
+        uint64_t ts = get_ntp_time_us();
+        printf("timestamp (hex): 0x%016llX\n", ts);
+        ts = reverse_bytes_u64(ts);
+        memcpy(extended_buffer, &ts, sizeof(uint64_t));
+        offset = sizeof(uint64_t);
+    }
+
+    if (offset + len > sizeof(extended_buffer)) {
+        len = sizeof(extended_buffer) - offset;
+    }
+
+    memcpy(extended_buffer + offset, data, len);
+    size_t total_len = offset + len;
+
+    // WebSocket
+    send_uart_ws_data(uart_port, extended_buffer, total_len);
+    ESP_LOGI(TAG, "total_len: %d", total_len);
+
+    // TCP
+    if (global_tcp_config.enabled) {
+        send_tcp_packet(global_tcp_config.server, global_tcp_config.port, uart_port, extended_buffer, total_len);
+    }
+
+    // UDP
+    if (global_udp_config.enabled) {
+        send_udp_packet(global_udp_config.server, global_udp_config.port, uart_port, extended_buffer, total_len);
+    }
+
+    // MQTT
+    esp_mqtt_client_handle_t client = get_mqtt_client_handle();
+    if (client != NULL && global_mqtt_config.tx_enabled) {
+        char topic[16];
+        snprintf(topic, sizeof(topic), "uart/%d", uart_port);
+        esp_mqtt_client_publish(client, topic, (const char *)extended_buffer, total_len, 1, 0);
+    }
 }
 
 void send_tcp_packet(const char *host, int port, int uart_port, const uint8_t *data, size_t len) {
@@ -134,4 +163,14 @@ void send_udp_packet(const char *host, int port, int uart_port, const uint8_t *d
     memcpy(buffer + offset, data, len);
     sendto(sock, buffer, offset + len, 0, (struct sockaddr *)&dest, sizeof(dest));
     close(sock);
+}
+
+uint64_t reverse_bytes_u64(uint64_t value) {
+    uint64_t result = 0;
+    for (int i = 0; i < 8; i++) {
+        result <<= 8;
+        result |= (value & 0xFF);
+        value >>= 8;
+    }
+    return result;
 }

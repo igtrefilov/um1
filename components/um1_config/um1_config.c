@@ -6,6 +6,7 @@ um1_uart_config_t global_uart_config[2];
 mqtt_config_t global_mqtt_config;
 stream_config_t global_tcp_config;
 stream_config_t global_udp_config;
+sntp_config_t global_sntp_config;
 
 void read_config_and_apply(void)
 {
@@ -101,6 +102,17 @@ void read_config_and_apply(void)
 	    global_udp_config.enabled = cJSON_GetObjectItem(udp, "enabled")->valueint;
 	    strcpy(global_udp_config.server, cJSON_GetObjectItem(udp, "server")->valuestring);
 	    global_udp_config.port = cJSON_GetObjectItem(udp, "port")->valueint;
+	}
+	cJSON *sntp = cJSON_GetObjectItem(root, "sntp");
+	if (sntp) {
+	    global_sntp_config.enabled = cJSON_GetObjectItem(sntp, "enabled")->valueint;
+	    strcpy(global_sntp_config.server_ip, cJSON_GetObjectItem(sntp, "server_ip")->valuestring);
+	    global_sntp_config.sync_interval_sec = cJSON_GetObjectItem(sntp, "sync_interval_sec")->valueint;
+
+	    ESP_LOGI("CONFIG", "SNTP: enabled=%d, server_ip=%s, interval=%d",
+	             global_sntp_config.enabled,
+	             global_sntp_config.server_ip,
+	             global_sntp_config.sync_interval_sec);
 	}
 
     cJSON_Delete(root);
