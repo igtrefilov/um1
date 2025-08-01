@@ -24,6 +24,16 @@
 	  </div>
 	  <label><input type="checkbox" id="uart1"> uart1</label>
 	  <label><input type="checkbox" id="uart2"> uart2</label>
+	  <div id="reboot_overlay" class="overlay" style="display:none;">
+  	  <div class="overlay-card">
+		  <h3>Перезагрузка устройства…</h3>
+		  <progress id="rb_progress" max="100" value="0"></progress>
+		  <div id="rb_status" style="margin-top:8px;">Ожидаем повторного подключения…</div>
+		  <div style="margin-top:12px; font-size:12px; opacity:.8">
+		  	Оценочное время ~25–30 секунд. Закроется автоматически, как только устройство ответит.
+		  </div>
+  	   </div>
+</div>
 	  <div id="log" class="stream-output"></div>
 	</div>
 	  <script src="main.js"></script>

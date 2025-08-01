@@ -15,6 +15,14 @@
   margin-bottom: 10px;
 }
 
-
-/* Timestamp color */
 .ts { color: blue; }
+
+.overlay {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.35); z-index: 9999;
+}
+.overlay-card {
+  background: #fff; padding: 16px; border-radius: 8px; width: 340px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.2);
+}
+.overlay-card progress { width: 100%; height: 16px; }
