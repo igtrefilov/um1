@@ -3,16 +3,35 @@ const ws = new WebSocket(`ws://${location.host}/ws`);
 
 function start_socket(){
 	ws.onopen = () => log("✅ Соединение открыто");
-	ws.onmessage = e => log("📨 Получено: " + e.data);
+	ws.onmessage = e => log(e.data);
 	ws.onclose = () => log("❌ Соединение закрыто");
 	ws.onerror = err => log("⚠️ Ошибка: " + err);
 }
 
 function log(msg) {
-	const line = document.createElement("div");
-	line.textContent = msg;
-	logDiv.appendChild(line);
-	logDiv.scrollTop = logDiv.scrollHeight;
+  const line = document.createElement("div");
+  const text = String(msg);
+
+  // Ищем ведущий timestamp в распространённых форматах:
+  // [YYYY-MM-DD HH:MM:SS(.ms)], [HH:MM:SS(.ms)], YYYY-MM-DD HH:MM:SS(.ms), HH:MM:SS(.ms)
+  const m = text.match(/^(\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:[.,]\d+)?\]|\[\d{2}:\d{2}:\d{2}(?:[.,]\d+)?\]|(?:\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2}(?:[.,]\d+)?)/);
+
+  if (m) {
+    const tsSpan = document.createElement('span');
+    tsSpan.textContent = m[1] + ' ';
+    tsSpan.className = 'ts'; // стилизуем через CSS
+
+    const msgSpan = document.createElement('span');
+    msgSpan.textContent = text.slice(m[1].length).replace(/^\s+/, '');
+
+    line.appendChild(tsSpan);
+    line.appendChild(msgSpan);
+  } else {
+    line.textContent = text;
+  }
+
+  logDiv.appendChild(line);
+  logDiv.scrollTop = logDiv.scrollHeight;
 }
 
 function loadSidebar(){

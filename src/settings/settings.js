@@ -22,7 +22,7 @@ function toggleAllFields() {
   const toggles = [
     {
       enabledId: 'mqtt_enabled',
-      fieldIds: ['mqtt_broker', 'mqtt_username', 'mqtt_password', 'mqtt_tx_enabled']
+      fieldIds: ['mqtt_broker', 'mqtt_username', 'mqtt_password']
     },
     {
       enabledId: 'tcp_enabled',
@@ -64,7 +64,6 @@ function collectSettings() {
 		  broker: document.getElementById("mqtt_broker").value,
 		  username: document.getElementById("mqtt_username").value,
 		  password: document.getElementById("mqtt_password").value,
-		  tx_enabled: document.getElementById("mqtt_tx_enabled").checked
 		},
 	tcp: {
 	  enabled: document.getElementById("tcp_enabled").checked,
@@ -118,7 +117,6 @@ async function loadConfigFromServer() {
 		document.getElementById("mqtt_broker").value = config.mqtt.broker;
 		document.getElementById("mqtt_username").value = config.mqtt.username;
 		document.getElementById("mqtt_password").value = config.mqtt.password;
-		document.getElementById("mqtt_tx_enabled").checked = config.mqtt.tx_enabled;
 		
 		document.getElementById("tcp_enabled").checked = config.tcp.enabled;
 		document.getElementById("tcp_server").value = config.tcp.server;
