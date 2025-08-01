@@ -70,11 +70,6 @@ void uart2_task(void *arg) {
     while (1) {
         int len = uart_read_bytes(UART_PORT_NUM_2, uart_buffer, BUF_SIZE - 1, 1 / portTICK_PERIOD_MS);
         if (len > 0) {
-        	printf("uart: ");
-        	for (int i = 0; i < len; i++) {
-        	    printf("%02X ", uart_buffer[i]);
-        	}
-        	printf("\n");
         	send_uart_packet_with_timestamp(UART_PORT_NUM_2, uart_buffer, len);
         }
         vTaskDelay(1);
@@ -90,7 +85,6 @@ void send_uart_packet_with_timestamp(int uart_port, const uint8_t *data, size_t 
 
     if (is_sntp_enabled()) {
         uint64_t ts = get_ntp_time_us();
-        printf("timestamp (hex): 0x%016llX\n", ts);
         ts = reverse_bytes_u64(ts);
         memcpy(extended_buffer, &ts, sizeof(uint64_t));
         offset = sizeof(uint64_t);
@@ -105,7 +99,6 @@ void send_uart_packet_with_timestamp(int uart_port, const uint8_t *data, size_t 
 
     // WebSocket
     send_uart_ws_data(uart_port, extended_buffer, total_len);
-    ESP_LOGI(TAG, "total_len: %d", total_len);
 
     // TCP
     if (global_tcp_config.enabled) {
@@ -119,7 +112,7 @@ void send_uart_packet_with_timestamp(int uart_port, const uint8_t *data, size_t 
 
     // MQTT
     esp_mqtt_client_handle_t client = get_mqtt_client_handle();
-    if (client != NULL && global_mqtt_config.tx_enabled) {
+    if (client != NULL && global_mqtt_config.enabled) {
         char topic[16];
         snprintf(topic, sizeof(topic), "uart/%d", uart_port);
         esp_mqtt_client_publish(client, topic, (const char *)extended_buffer, total_len, 1, 0);

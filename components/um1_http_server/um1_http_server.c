@@ -492,15 +492,44 @@ esp_err_t ws_control_handler(httpd_req_t *req) {
 }
 
 void send_uart_ws_data(int uart_port, const uint8_t *data, size_t len) {
-    const char *prefix = uart_port == UART_PORT_NUM_1 ? "uart1:" : "uart2:";
     char msg[1024];
+
     for (size_t i = 0; i < subs_count; ++i) {
         bool enabled = (uart_port == UART_PORT_NUM_1) ? subscribers[i].uart1 : subscribers[i].uart2;
         if (!enabled) continue;
 
-        int offset = snprintf(msg, sizeof(msg), "%s", prefix);
+        int offset = 0;
+
+        if (is_sntp_enabled() && len >= sizeof(uint64_t)) {
+            uint64_t ts_us;
+            memcpy(&ts_us, data, sizeof(uint64_t));
+            ts_us = reverse_bytes_u64(ts_us);
+
+            time_t ts_sec = ts_us / 1000000;
+            int ts_usec = ts_us % 1000000;
+
+            struct tm timeinfo;
+            localtime_r(&ts_sec, &timeinfo);
+
+            offset += snprintf(msg + offset, sizeof(msg) - offset,
+                               "%04d-%02d-%02d %02d:%02d:%02d.%06d ",
+                               timeinfo.tm_year + 1900,
+                               timeinfo.tm_mon + 1,
+                               timeinfo.tm_mday,
+                               timeinfo.tm_hour,
+                               timeinfo.tm_min,
+                               timeinfo.tm_sec,
+                               ts_usec);
+
+            data += sizeof(uint64_t);
+            len  -= sizeof(uint64_t);
+        }
+
+        const char *prefix = uart_port == UART_PORT_NUM_1 ? "uart1:" : "uart2:";
+        offset += snprintf(msg + offset, sizeof(msg) - offset, "%s", prefix);
+
         for (int j = 0; j < len && offset < sizeof(msg) - 3; ++j) {
-            offset += snprintf(msg + offset, sizeof(msg) - offset, "%02X ", data[j]);
+            offset += snprintf(msg + offset, sizeof(msg) - offset, "%02X", data[j]);
         }
 
         httpd_ws_frame_t ws_pkt = {

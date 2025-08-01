@@ -32,7 +32,6 @@ typedef struct {
     char broker[64];
     char username[32];
     char password[32];
-    bool tx_enabled;
 } mqtt_config_t;
 
 typedef struct {
