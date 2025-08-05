@@ -1,0 +1,64 @@
+:root{
+  --bg: #e0f7ff;           /* keep existing light blue background */
+  --panel: #ffffff;
+  --ink: #0a0a0a;
+  --ink-weak:#333;
+  --brand:#000000;          /* keep current black sidebar base */
+  --accent:#0078d4;         /* Cisco-ish blue accent */
+  --ok:#2e7d32; --warn:#ed6c02; --err:#c62828;
+  --radius:12px; --gap:12px; --pad:16px; --shadow:0 1px 3px rgba(0,0,0,.08);
+  --sidebar-w:260px; --sidebar-w-compact:72px; --topbar-h:56px;
+  --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+html{font-family:var(--font); color:var(--ink); background:var(--bg)}
+body{margin:0; display:grid; grid-template-columns:var(--sidebar-w) 1fr; grid-template-rows:var(--topbar-h) 1fr; grid-template-areas:"sidebar topbar" "sidebar main"; min-height:100vh}
+
+.topbar{grid-area:topbar; display:flex; align-items:center; justify-content:space-between; padding:0 var(--pad); background:var(--panel); box-shadow:var(--shadow); position:sticky; top:0; z-index:5}
+.topbar .status{display:flex; gap:16px; align-items:center; color:var(--ink-weak); font-size:14px}
+.topbar .badge{padding:2px 8px; border-radius:999px; background:#f1f5f9}
+
+.sidebar{grid-area:sidebar; background:var(--brand); color:#fff; display:flex; flex-direction:column; height:100vh; position:sticky; top:0}
+.brand{display:flex; align-items:center; gap:10px; padding:14px var(--pad); border-bottom:1px solid rgba(255,255,255,.08)}
+.brand-logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#00a0ff,#0048ff)}
+.brand-title{font-weight:600}
+
+.nav{display:flex; flex-direction:column; padding:10px 6px; gap:4px; overflow-y:auto}
+.nav-item{display:flex; align-items:center; gap:12px; padding:10px 12px; color:#fff; text-decoration:none; border-radius:10px; opacity:.9}
+.nav-item:hover{background:rgba(255,255,255,.08); opacity:1}
+.nav-item.active{background:rgba(255,255,255,.16)}
+.nav-ico{width:20px; text-align:center}
+.nav-text{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.sidebar-footer{margin-top:auto; padding:10px}
+
+.content{grid-area:main; padding:16px; display:block}
+.container{max-width:1100px; margin:0 auto}
+.card{background:var(--panel); border-radius:var(--radius); box-shadow:var(--shadow); padding:var(--pad); margin-bottom:16px}
+.card h3{margin-top:0}
+
+.notification{display:none; padding:10px 12px; border-radius:10px; margin-bottom:12px; background:#e6f4ff; border:1px solid #b3e0ff}
+.notification.error{background:#ffebee;border-color:#ffcdd2}
+.notification.success{background:#e8f5e9;border-color:#c8e6c9}
+
+.settings-table{width:100%; border-collapse:collapse}
+.settings-table td{padding:8px 10px; vertical-align:middle}
+.settings-table input[type="text"], .settings-table input[type="number"], .settings-table select{width:100%; padding:8px 10px; border:1px solid #d0d7de; border-radius:8px; background:#fff}
+button{padding:8px 12px; border-radius:10px; border:1px solid #d0d7de; background:#fff; cursor:pointer}
+button.primary{background:var(--accent); color:#fff; border-color:transparent}
+button.ghost{background:transparent; color:#fff; border-color:rgba(255,255,255,.3)}
+
+pre#log, pre#json_output{background:#0b1020;color:#e6edf3;padding:12px;border-radius:10px;overflow:auto;max-height:45vh}
+
+.reboot-progress{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+.reboot-progress>div{height:100%;background:var(--accent);width:0%}
+
+@media (max-width: 960px){
+  :root{--sidebar-w:var(--sidebar-w-compact)}
+  .nav-text{display:none}
+  body{grid-template-columns:var(--sidebar-w-compact) 1fr}
+}
+@media (max-width: 640px){
+  .content{padding:10px}
+  .settings-table td:first-child{width:42%}
+}

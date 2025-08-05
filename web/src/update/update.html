@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>УМ1 Обновление</title>
+  <link rel="icon" type="image/png" href="../favicon.png">  
+  <link rel="stylesheet" href="../common.css">
+  <link rel="stylesheet" href="update.css">
+</head>
+<body>
+  <div class="sidebar" id="sidebar"></div>
+  <div class="content"><div class="container">
+
+    <h2>📦 Обновление устройства</h2>
+
+    <div class="section">
+      <label>Выберите папку <code>update</code> (с firmware.bin и src/):</label><br>
+      <input type="file" id="updateFolder" webkitdirectory directory multiple><br><br>
+      <button onclick="uploadAll()">Обновить всё</button>
+    </div>
+
+    <div class="section" id="webSection">
+	  	<h3 style="display:none;">Web UI</h3>
+	  	<progress id="webProgress" value="0" max="100" style="display:none;"></progress>
+	  	<p id="webStatus"></p>
+	</div>
+
+	<div class="section" id="fwSection">
+	  <h3 style="display:none;">Firmware</h3>
+	  <progress id="otaProgress" value="0" max="100" style="display:none;"></progress>
+	  <p id="otaStatus"></p>
+	</div>
+    
+    <div id="reboot_overlay" class="overlay" style="display:none;">
+	  <div class="overlay-card">
+		<h3>Перезагрузка устройства…</h3>
+		<progress id="rb_progress" max="100" value="0"></progress>
+		<div id="rb_status" style="margin-top:8px;">Ожидаем повторного подключения…</div>
+		<div style="margin-top:12px; font-size:12px; opacity:.8">
+		  Ожидание переподключения...
+		</div>
+    </div>
+</div>
+  </div>
+  <div id="log" class="content" ></div>
+
+  <script src="update.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
