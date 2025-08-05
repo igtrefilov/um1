@@ -1,0 +1,8 @@
+source "/home/ilya/esp/esp-idf/components/bootloader/Kconfig.projbuild"
+source "/home/ilya/esp/esp-idf/components/esp_app_format/Kconfig.projbuild"
+source "/home/ilya/esp/esp-idf/components/esp_rom/Kconfig.projbuild"
+source "/home/ilya/esp/esp-idf/components/esptool_py/Kconfig.projbuild"
+source "/home/ilya/esp/esp-idf/components/partition_table/Kconfig.projbuild"
+source "/home/ilya/esp/ESP32/projects/work/um1/components/um1_http_server/Kconfig.projbuild"
+source "/home/ilya/esp/ESP32/projects/work/um1/components/um1_lan/Kconfig.projbuild"
+source "/home/ilya/esp/ESP32/projects/work/um1/components/um1_wifi/Kconfig.projbuild"
