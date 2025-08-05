@@ -1,43 +1,50 @@
-<!DOCTYPE html>
-<html>
-	<head>
-		<meta charset="UTF-8">
-		<title>УМ1</title>
-		<link rel="icon" type="image/png" href="/favicon.png">
-		<link rel="stylesheet" href="common.css"> 
-		<link rel="stylesheet" href="main.css">
-	</head>
-	<body>
-  	<div class="sidebar" id="sidebar"></div>
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>УМ1</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="stylesheet" href="common.css" />
+    <link rel="stylesheet" href="main.css" />
+  </head>
+  <body>
+    <div class="sidebar" id="sidebar"></div>
+    <div class="content">
+      <div class="container">
+        <div class="card">
+          <div class="cmd-row">
+            <input id="message" type="text" placeholder="Введите команду" />
+            <button class="primary" onclick="sendMessage()">Отправить</button>
+          </div>
+          <div class="btn-row">
+            <button onclick="sendReboot()">Перезагрузить МК</button>
+            <div class="spacer"></div>
+            <button onclick="startStream()">Начать стрим</button>
+            <button onclick="stopStream()">Остановить стрим</button>
+          </div>
+          <div class="check-row">
+            <label><input type="checkbox" id="uart1" /> uart1</label>
+            <label><input type="checkbox" id="uart2" /> uart2</label>
+          </div>
+        </div>
+        <div id="log" class="stream-output"></div>
+      </div>
+    </div>
 
-	<div class="content"><div class="container">
-		<div class="card">
-			<input id="message" type="text" placeholder="Введите команду">
-	  		<button onclick="sendMessage()">Отправить</button>
-		</div>
-	  <div>
-	    <button onclick="sendReboot()">Перезагрузить МК</button>
-	  </div>
-	  <div>
-		<button onclick="startStream()">Начать стрим</button>
-		<button onclick="stopStream()">Остановить стрим</button>
-	  </div>
-	  <label><input type="checkbox" id="uart1"> uart1</label>
-	  <label><input type="checkbox" id="uart2"> uart2</label>
-	  <div id="reboot_overlay" class="overlay" style="display:none;">
-  	  <div class="overlay-card">
-		  <h3>Перезагрузка устройства…</h3>
-		  <progress id="rb_progress" max="100" value="0"></progress>
-		  <div id="rb_status" style="margin-top:8px;">Ожидаем повторного подключения…</div>
-		  <div style="margin-top:12px; font-size:12px; opacity:.8">
-		  	Ожидание переподключения...
-		  </div>
-  	   </div>
-</div>
-	  <div id="log" class="stream-output"></div>
-	</div>
-<script src="main.js"></script>
-<script src="/app.js"></script>
-</body>
+    <div id="reboot_overlay" class="overlay" style="display: none">
+      <div class="overlay-card">
+        <h3>Перезагрузка устройства…</h3>
+        <progress id="rb_progress" max="100" value="0"></progress>
+        <div id="rb_status" style="margin-top: 8px">
+          Ожидаем повторного подключения…
+        </div>
+        <div style="margin-top: 12px; font-size: 12px; opacity: 0.8">
+          Ожидание переподключения...
+        </div>
+      </div>
+    </div>
+
+    <script src="main.js"></script>
+    <script src="/app.js"></script>
+  </body>
 </html>
-

@@ -1,28 +1,60 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Вход — УМ1</title>
-  <link rel="icon" type="image/png" href="/favicon.png">
-  <link rel="stylesheet" href="/common.css">
-  <style>
-    body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh}
-    .login-card{width:min(360px,90vw)}
-    .login-card h2{margin:0 0 12px 0}
-    .fld{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
-    .fld input{padding:10px;border:1px solid #d0d7de;border-radius:10px}
-  </style>
-</head>
-<body>
-  <div class="card login-card">
-    <h2>Вход</h2>
-    <div id="notif" class="notification" style="display:none;"></div>
-    <div class="fld"><label>Логин</label><input id="login_user" type="text" autocomplete="username"></div>
-    <div class="fld"><label>Пароль</label><input id="login_pass" type="password" autocomplete="current-password"></div>
-    <button class="primary" id="login_btn">Войти</button>
-    <p style="color:#555;font-size:13px;margin-top:8px">Если на сервере включён HTTP Basic Auth, эти данные будут использоваться для всех запросов.</p>
-  </div>
-  <script src="/app.js"></script>
-  <script src="/login.js"></script>
-</body>
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Вход — УМ1</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="stylesheet" href="/common.css" />
+    <style>
+      body {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      }
+      .login-card {
+        width: min(360px, 90vw);
+      }
+      .login-card h2 {
+        margin: 0 0 12px 0;
+      }
+      .fld {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      .fld input {
+        padding: 10px;
+        border: 1px solid #d0d7de;
+        border-radius: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card login-card">
+      <h2>Вход</h2>
+      <div id="notif" class="notification" style="display: none"></div>
+      <div class="fld">
+        <label>Логин</label
+        ><input id="login_user" type="text" autocomplete="username" />
+      </div>
+      <div class="fld">
+        <label>Пароль</label
+        ><input
+          id="login_pass"
+          type="password"
+          autocomplete="current-password"
+        />
+      </div>
+      <button class="primary" id="login_btn">Войти</button>
+      <p style="color: #555; font-size: 13px; margin-top: 8px">
+        Если на сервере включён HTTP Basic Auth, эти данные будут использоваться
+        для всех запросов.
+      </p>
+    </div>
+    <script src="/app.js"></script>
+    <script src="/login.js"></script>
+  </body>
 </html>
