@@ -1,50 +1,51 @@
 <!doctype html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <title>УМ1</title>
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="stylesheet" href="common.css" />
-    <link rel="stylesheet" href="main.css" />
-  </head>
-  <body>
-    <div class="sidebar" id="sidebar"></div>
-    <div class="content">
-      <div class="container">
-        <div class="card">
-          <div class="cmd-row">
-            <input id="message" type="text" placeholder="Введите команду" />
-            <button class="primary" onclick="sendMessage()">Отправить</button>
-          </div>
-          <div class="btn-row">
-            <button onclick="sendReboot()">Перезагрузить МК</button>
-            <div class="spacer"></div>
-            <button onclick="startStream()">Начать стрим</button>
-            <button onclick="stopStream()">Остановить стрим</button>
-          </div>
-          <div class="check-row">
-            <label><input type="checkbox" id="uart1" /> uart1</label>
-            <label><input type="checkbox" id="uart2" /> uart2</label>
-          </div>
-        </div>
-        <div id="log" class="stream-output"></div>
+<head>
+  <meta charset="UTF-8" />
+  <title>УМ1</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1>УМ1</h1>
+    <nav>
+      <a href="/index.html" class="active">Главная</a>
+      <a href="/settings/settings.html">Настройки</a>
+      <a href="/network/network.html">Сеть</a>
+      <a href="/update/update.html">Обновление</a>
+      <a href="/about/about.html">О системе</a>
+      <a href="#" id="logout_btn">Выход</a>
+    </nav>
+  </header>
+  <div class="container">
+    <div id="notif" class="notification"></div>
+    <div class="card">
+      <div class="cmd-row">
+        <input id="message" type="text" placeholder="Введите команду" />
+        <button onclick="sendMessage()">Отправить</button>
+      </div>
+      <div class="btn-row" style="margin-top:16px;">
+        <button onclick="sendReboot()">Перезагрузить МК</button>
+        <div class="spacer"></div>
+        <button onclick="startStream()">Начать стрим</button>
+        <button onclick="stopStream()">Остановить стрим</button>
+      </div>
+      <div class="check-row" style="margin-top:16px;">
+        <label><input type="checkbox" id="uart1" /> uart1</label>
+        <label><input type="checkbox" id="uart2" /> uart2</label>
       </div>
     </div>
-
-    <div id="reboot_overlay" class="overlay" style="display: none">
-      <div class="overlay-card">
-        <h3>Перезагрузка устройства…</h3>
-        <progress id="rb_progress" max="100" value="0"></progress>
-        <div id="rb_status" style="margin-top: 8px">
-          Ожидаем повторного подключения…
-        </div>
-        <div style="margin-top: 12px; font-size: 12px; opacity: 0.8">
-          Ожидание переподключения...
-        </div>
-      </div>
+    <div id="log" class="stream-output"></div>
+  </div>
+  <div id="reboot_overlay" class="overlay">
+    <div class="overlay-card">
+      <h3>Перезагрузка устройства…</h3>
+      <progress id="rb_progress" max="100" value="0"></progress>
+      <div id="rb_status" style="margin-top:8px">Ожидаем повторного подключения…</div>
     </div>
-
-    <script src="main.js"></script>
-    <script src="/app.js"></script>
-  </body>
+  </div>
+  <script src="/app.js"></script>
+  <script src="/main.js"></script>
+</body>
 </html>
