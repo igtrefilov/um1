@@ -10,8 +10,8 @@
 	<body>
   	<div class="sidebar" id="sidebar"></div>
 
-	<div class="content">
-		<div>
+	<div class="content"><div class="container">
+		<div class="card">
 			<input id="message" type="text" placeholder="Введите команду">
 	  		<button onclick="sendMessage()">Отправить</button>
 		</div>
@@ -30,14 +30,14 @@
 		  <progress id="rb_progress" max="100" value="0"></progress>
 		  <div id="rb_status" style="margin-top:8px;">Ожидаем повторного подключения…</div>
 		  <div style="margin-top:12px; font-size:12px; opacity:.8">
-		  	Оценочное время ~25–30 секунд. Закроется автоматически, как только устройство ответит.
+		  	Ожидание переподключения...
 		  </div>
   	   </div>
 </div>
 	  <div id="log" class="stream-output"></div>
 	</div>
-	  <script src="main.js"></script>
-	  <script>loadSidebar();</script>
-	</body>
+<script src="main.js"></script>
+<script src="/app.js"></script>
+</body>
 </html>
 

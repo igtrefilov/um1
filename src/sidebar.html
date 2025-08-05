@@ -1,21 +1,24 @@
-<style>
-	.menu-item {
-	margin-bottom: 15px;
-	cursor: pointer;
-	}
-
-	.menu-item:hover {
-	text-decoration: underline;
-	}
-
-	.menu-item a {
-	  color: white;
-	  text-decoration: none;
-	}
-</style>
-
-<div class="menu-item"><a href="/index.html">Главная</a></div>
-<div class="menu-item"><a href="/settings/settings.html">Настройки</a></div>
-<div class="menu-item"><a href="/network/network.html">Сеть</a></div>
-<div class="menu-item"><a href="/update/update.html">Обновления</a></div>
-<div class="menu-item"><a href="/about/about.html">О системе</a></div>  
+<div class="brand">
+  <div class="brand-logo" aria-hidden="true"></div>
+  <div class="brand-title">УМ1</div>
+</div>
+<nav class="nav">
+  <a class="nav-item" href="/index.html" data-nav="home">
+    <span class="nav-ico" aria-hidden="true">🏠</span><span class="nav-text">Главная</span>
+  </a>
+  <a class="nav-item" href="/settings/settings.html" data-nav="settings">
+    <span class="nav-ico" aria-hidden="true">⚙️</span><span class="nav-text">Настройки</span>
+  </a>
+  <a class="nav-item" href="/network/network.html" data-nav="network">
+    <span class="nav-ico" aria-hidden="true">🌐</span><span class="nav-text">Сеть</span>
+  </a>
+  <a class="nav-item" href="/update/update.html" data-nav="update">
+    <span class="nav-ico" aria-hidden="true">⬆️</span><span class="nav-text">Обновления</span>
+  </a>
+  <a class="nav-item" href="/about/about.html" data-nav="about">
+    <span class="nav-ico" aria-hidden="true">🛈</span><span class="nav-text">О системе</span>
+  </a>
+</nav>
+<div class="sidebar-footer">
+  <button id="sidebar-collapse" class="btn ghost" title="Свернуть меню" aria-label="Свернуть меню">⟨⟩</button>
+</div>

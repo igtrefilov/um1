@@ -9,7 +9,7 @@
 	</head>
 	<body>
 		<div class="sidebar" id="sidebar"></div>
-		<div class="content">
+		<div class="content"><div class="container">
 			<div id="notif" class="notification" style="display:none;"></div>
 			<h3>LAN</h3>
 			<table class="settings-table">
@@ -70,10 +70,13 @@
 			<br>
 			<button onclick="collectSettings()">Сохранить настройки</button>
 			<pre id="json_output"></pre>
+		<script src="/app.js"></script>
+
 			
 		</div>
+		</div>
 		<script src="network.js"></script>
-		<script>loadSidebar();</script>
-		<script>loadConfigFromServer();</script>
+		<script src="/app.js"></script>
+<script>loadConfigFromServer();</script>
 	</body>
 </html>
