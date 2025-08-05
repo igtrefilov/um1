@@ -1,28 +1,26 @@
-#message{
-	width: 30%;
+.cmd-row {
+  display: flex;
+  gap: var(--gap);
 }
-
-.stream-output {
-  background-color: white;
-  border: 1px solid #ccc;
-  padding: 10px;
-  font-family: monospace;
-  white-space: pre-wrap;
-  overflow-y: auto;
-  flex-grow: 1;
-  height: 95%;
-  margin-top: 30px;
-  margin-bottom: 10px;
+#message {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
 }
-
-.ts { color: blue; }
-
-.overlay {
-  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,.35); z-index: 9999;
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  align-items: center;
 }
-.overlay-card {
-  background: #fff; padding: 16px; border-radius: 8px; width: 340px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.2);
+.btn-row .spacer {
+  flex: 1;
 }
-.overlay-card progress { width: 100%; height: 16px; }
+.check-row {
+  display: flex;
+  gap: var(--gap);
+}
+.ts {
+  color: blue;
+}
