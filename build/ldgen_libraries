@@ -62,6 +62,7 @@
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/spiffs/libspiffs.a
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/wifi_provisioning/libwifi_provisioning.a
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/main/libmain.a
+/home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_auth/libum1_auth.a
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_config/libum1_config.a
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_spiffs/libum1_spiffs.a
 /home/ilya/esp/ESP32/projects/work/um1/build/esp-idf/um1_lan/libum1_lan.a

@@ -10,6 +10,20 @@ static int ota_ws_fd = -1;
 
 static const char *TAG = "http_server";
 
+httpd_uri_t login = {
+    .uri      = "/login",
+    .method   = HTTP_POST,
+    .handler  = handle_login,
+    .user_ctx = NULL
+};
+
+httpd_uri_t logout = {
+    .uri      = "/logout",
+    .method   = HTTP_POST,
+    .handler  = handle_logout,
+    .user_ctx = NULL
+};
+
 httpd_uri_t system_info = {
     .uri       = "/api/system_info",
     .method    = HTTP_GET,
@@ -407,11 +421,21 @@ esp_err_t spiffs_get_handler(httpd_req_t *req)
 {
     char path[512];
     const char *base_path = "/spiffs/src";
-
     strlcpy(path, base_path, sizeof(path));
-    strlcat(path, req->uri, sizeof(path));
+
     if (req->uri[strlen(req->uri) - 1] == '/') {
+        strlcat(path, req->uri, sizeof(path));
         strlcat(path, "index.html", sizeof(path));
+    } else {
+        strlcat(path, req->uri, sizeof(path));
+    }
+
+    if (!is_public_uri(req->uri) && !token_is_valid(req)) {
+        ESP_LOGW(TAG, "Unauthorized access to %s", req->uri);
+        httpd_resp_set_status(req, "302 Found");
+        httpd_resp_set_hdr(req, "Location", "/login.html");
+        httpd_resp_sendstr(req, "Redirecting...");
+        return ESP_OK;
     }
 
     ESP_LOGI(TAG, "Open path: %s", path);
@@ -429,14 +453,19 @@ esp_err_t spiffs_get_handler(httpd_req_t *req)
         else if (strcmp(ext, ".js")   == 0) httpd_resp_set_type(req, "application/javascript");
         else if (strcmp(ext, ".png")  == 0) httpd_resp_set_type(req, "image/png");
         else if (strcmp(ext, ".jpg")  == 0) httpd_resp_set_type(req, "image/jpeg");
-        else                                 httpd_resp_set_type(req, "application/octet-stream");
+        else                                httpd_resp_set_type(req, "application/octet-stream");
     }
 
     char chunk[128];
     size_t len;
     while ((len = fread(chunk, 1, sizeof(chunk), file)) > 0) {
-        httpd_resp_send_chunk(req, chunk, len);
+        if (httpd_resp_send_chunk(req, chunk, len) != ESP_OK) {
+            fclose(file);
+            ESP_LOGE(TAG, "Error sending chunk");
+            return ESP_FAIL;
+        }
     }
+
     fclose(file);
     httpd_resp_send_chunk(req, NULL, 0);
     return ESP_OK;
@@ -576,6 +605,7 @@ httpd_handle_t start_webserver(void)
 {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    config.max_uri_handlers = 16;
     config.uri_match_fn = httpd_uri_match_wildcard;
     config.lru_purge_enable = true;
 
@@ -587,6 +617,8 @@ httpd_handle_t start_webserver(void)
         ESP_LOGI(TAG, "Registering URI handlers");
 
         httpd_register_uri_handler(server, &ws);
+        httpd_register_uri_handler(server, &login);
+        httpd_register_uri_handler(server, &logout);
         httpd_register_uri_handler(server, &system_info);
         httpd_register_uri_handler(server, &config_get_uri);
         httpd_register_uri_handler(server, &config_save);

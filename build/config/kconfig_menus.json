@@ -27412,6 +27412,37 @@
                 "id": "component-config-wi-fi-provisioning-manager",
                 "title": "Wi-Fi Provisioning Manager",
                 "type": "menu"
+            },
+            {
+                "children": [
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": null,
+                        "id": "TOKEN_AUTH_ENABLED",
+                        "name": "TOKEN_AUTH_ENABLED",
+                        "range": null,
+                        "title": "Enable Token-based Auth",
+                        "type": "bool"
+                    },
+                    {
+                        "children": [],
+                        "depends_on": null,
+                        "help": null,
+                        "id": "TOKEN_AUTH_TTL_SEC",
+                        "name": "TOKEN_AUTH_TTL_SEC",
+                        "range": [
+                            60,
+                            86400
+                        ],
+                        "title": "Token TTL (seconds)",
+                        "type": "int"
+                    }
+                ],
+                "depends_on": null,
+                "id": "component-config-token-auth-httpd-",
+                "title": "Token Auth (HTTPD)",
+                "type": "menu"
             }
         ],
         "depends_on": null,

@@ -1,6 +1,6 @@
 #include "um1_uart.h"
 
-static const char *TAG = "um1_uart";
+/*static const char *TAG = "um1_uart";*/
 
 void start_uart(void){
 	um1_uart_config_t uart1_cfg = global_uart_config[0];

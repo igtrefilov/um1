@@ -42,6 +42,7 @@
 #include "um1_lan.h"
 #include "um1_uart.h"
 #include "um1_sntp.h"
+#include "um1_auth.h"
 
 typedef struct {
     int fd;

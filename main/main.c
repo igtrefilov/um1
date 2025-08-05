@@ -17,6 +17,7 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
+#include "um1_auth.h"
 #include "um1_uart.h"
 #include "um1_lan.h"
 #include "um1_wifi.h"
@@ -63,6 +64,9 @@ void app_main(void)
 	vTaskDelay(pdMS_TO_TICKS(1000));
 
 	start_sntp();
+	vTaskDelay(pdMS_TO_TICKS(1000));
+
+	token_auth_init();
 
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(1000));
