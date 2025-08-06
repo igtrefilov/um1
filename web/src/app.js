@@ -27,7 +27,7 @@
         e.preventDefault();
         try {
           localStorage.removeItem('um1_auth');
-          await fetch('/logout', { method: 'GET', credentials: 'include' });
+          await fetch('/logout', { method: 'POST', credentials: 'include' });
         } catch(_){}
         location.href = '/login.html';
       });

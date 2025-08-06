@@ -24,6 +24,13 @@ httpd_uri_t logout = {
     .user_ctx = NULL
 };
 
+httpd_uri_t change_password = {
+    .uri      = "/api/change_password",
+    .method   = HTTP_POST,
+    .handler  = handle_change_password,
+    .user_ctx = NULL
+};
+
 httpd_uri_t system_info = {
     .uri       = "/api/system_info",
     .method    = HTTP_GET,
@@ -639,6 +646,7 @@ httpd_handle_t start_webserver(void)
         httpd_register_uri_handler(server, &ws);
         httpd_register_uri_handler(server, &login);
         httpd_register_uri_handler(server, &logout);
+        httpd_register_uri_handler(server, &change_password);
         httpd_register_uri_handler(server, &system_info);
         httpd_register_uri_handler(server, &config_get_uri);
         httpd_register_uri_handler(server, &config_save);
