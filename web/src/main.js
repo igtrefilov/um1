@@ -1,6 +1,7 @@
 const logDiv = document.getElementById("log");
 let ws;
 let pendingReboot = false;
+let statusInterval;
 
 function start_socket() {
   ws = new WebSocket(`ws://${location.host}/ws`);
@@ -31,6 +32,19 @@ function log(msg) {
 
   logDiv.appendChild(line);
   logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+function updateServerStatus() {
+  fetch('/api/stream_status')
+    .then(r => r.json())
+    .then(s => {
+      const el = document.getElementById('server_status');
+      if (!el) return;
+      const connected = s.tcp || s.udp;
+      el.textContent = `TCP: ${s.tcp ? 'подключен' : 'нет'}, UDP: ${s.udp ? 'подключен' : 'нет'}`;
+      el.className = 'server-status ' + (connected ? 'connected' : 'disconnected');
+    })
+    .catch(_ => {});
 }
 
 function loadSidebar() {
@@ -137,4 +151,17 @@ async function sendReboot() {
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!pendingReboot) start_socket();
+  fetch('/api/config')
+    .then(r => r.json())
+    .then(cfg => {
+      if (cfg.tcp.enabled || cfg.udp.enabled) {
+        const st = document.getElementById('server_status');
+        if (st) {
+          st.style.display = 'block';
+          updateServerStatus();
+          statusInterval = setInterval(updateServerStatus, 5000);
+        }
+      }
+    })
+    .catch(_ => {});
 });

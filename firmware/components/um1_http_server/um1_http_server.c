@@ -38,6 +38,13 @@ httpd_uri_t config_get_uri = {
     .user_ctx = NULL
 };
 
+httpd_uri_t stream_status = {
+    .uri      = "/api/stream_status",
+    .method   = HTTP_GET,
+    .handler  = stream_status_handler,
+    .user_ctx = NULL
+};
+
 const httpd_uri_t config_save = {
     .uri       = "/config",
     .method    = HTTP_POST,
@@ -164,6 +171,19 @@ esp_err_t system_info_handler(httpd_req_t *req)
     free(out);
     cJSON_Delete(root);
 
+    return ESP_OK;
+}
+
+esp_err_t stream_status_handler(httpd_req_t *req)
+{
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddBoolToObject(root, "tcp", tcp_connected);
+    cJSON_AddBoolToObject(root, "udp", udp_connected);
+    char *out = cJSON_PrintUnformatted(root);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, out);
+    free(out);
+    cJSON_Delete(root);
     return ESP_OK;
 }
 
@@ -622,6 +642,7 @@ httpd_handle_t start_webserver(void)
         httpd_register_uri_handler(server, &system_info);
         httpd_register_uri_handler(server, &config_get_uri);
         httpd_register_uri_handler(server, &config_save);
+        httpd_register_uri_handler(server, &stream_status);
         httpd_register_uri_handler(server, &upload);
         httpd_register_uri_handler(server, &ota_update);
         httpd_register_uri_handler(server, &reboot);

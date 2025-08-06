@@ -59,6 +59,7 @@ esp_err_t spiffs_get_handler(httpd_req_t *req);
 esp_err_t ws_control_handler(httpd_req_t *req);
 void send_uart_ws_data(int uart_port, const uint8_t *data, size_t len);
 esp_err_t reboot_handler(httpd_req_t *req);
+esp_err_t stream_status_handler(httpd_req_t *req);
 httpd_handle_t start_webserver(void);
 
 #endif // UM1_LAN_H
