@@ -65,17 +65,27 @@ document.addEventListener('DOMContentLoaded',()=>{
   toggleAllFields();
   loadConfigFromServer();
 
-  const btn = document.getElementById('change_pass_btn');
+  const btn = document.getElementById('change_creds_btn');
   if(btn){
     btn.addEventListener('click', async () => {
+      const newu = document.getElementById('new_username').value.trim();
       const oldp = document.getElementById('old_password').value.trim();
       const newp = document.getElementById('new_password').value.trim();
       const conf = document.getElementById('confirm_password').value.trim();
-      if(!newp || newp !== conf){
+
+      if(!newu && !newp){
+        showNotification('❌ Нет новых данных', true);
+        return;
+      }
+      if(newp && newp !== conf){
         showNotification('❌ Пароли не совпадают', true);
         return;
       }
-      const body = new URLSearchParams({ old_password: oldp, new_password: newp });
+
+      const body = new URLSearchParams({ old_password: oldp });
+      if(newu) body.append('new_username', newu);
+      if(newp) body.append('new_password', newp);
+
       try{
         const r = await fetch('/api/change_password', {
           method:'POST',
@@ -83,8 +93,8 @@ document.addEventListener('DOMContentLoaded',()=>{
           body: body.toString(),
           credentials:'include'
         });
-        if(r.ok) showNotification('✅ Пароль изменён');
-        else showNotification('❌ Не удалось изменить пароль', true);
+        if(r.ok) showNotification('✅ Данные обновлены');
+        else showNotification('❌ Не удалось обновить данные', true);
       }catch(_){
         showNotification('❌ Ошибка соединения', true);
       }

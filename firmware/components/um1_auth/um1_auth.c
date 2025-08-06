@@ -149,15 +149,22 @@ esp_err_t handle_change_password(httpd_req_t *req){
         httpd_resp_set_status(req, "400 Bad Request");
         return httpd_resp_sendstr(req, "no body");
     }
-    char oldp[160]={0}, newp[160]={0};
+    char oldp[160]={0}, newp[160]={0}, newu[96]={0};
     parse_field(body, "old_password", oldp, sizeof(oldp));
     parse_field(body, "new_password", newp, sizeof(newp));
+    parse_field(body, "new_username", newu, sizeof(newu));
     if(strcmp(oldp, TA.pass)!=0){
         httpd_resp_set_status(req, "403 Forbidden");
         return httpd_resp_sendstr(req, "wrong password");
     }
-    strlcpy(TA.pass, newp, sizeof(TA.pass));
-    auth_config.password = strdup(newp);
+    if(newp[0]){
+        strlcpy(TA.pass, newp, sizeof(TA.pass));
+        auth_config.password = strdup(newp);
+    }
+    if(newu[0]){
+        strlcpy(TA.user, newu, sizeof(TA.user));
+        auth_config.username = strdup(newu);
+    }
 
     FILE *f = fopen("/spiffs/src/config.json", "r");
     cJSON *root = NULL;
