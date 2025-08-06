@@ -44,7 +44,12 @@ function updateServerStatus() {
       el.textContent = `TCP: ${s.tcp ? 'подключен' : 'нет'}, UDP: ${s.udp ? 'подключен' : 'нет'}`;
       el.className = 'server-status ' + (connected ? 'connected' : 'disconnected');
     })
-    .catch(_ => {});
+    .catch(_ => {
+      const el = document.getElementById('server_status');
+      if (!el) return;
+      el.textContent = 'TCP: нет, UDP: нет';
+      el.className = 'server-status disconnected';
+    });
 }
 
 function loadSidebar() {
@@ -158,6 +163,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const st = document.getElementById('server_status');
         if (st) {
           st.style.display = 'block';
+          st.textContent = 'TCP: нет, UDP: нет';
+          st.className = 'server-status disconnected';
           updateServerStatus();
           statusInterval = setInterval(updateServerStatus, 5000);
         }
