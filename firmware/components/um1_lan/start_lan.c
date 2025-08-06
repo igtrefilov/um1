@@ -15,6 +15,7 @@
 #include "start_lan.h"
 #include "um1_lan.h"
 #include "um1_config.h"
+#include "um1_uart.h"
 
 static const char *TAG = "eth_if";
 
@@ -67,7 +68,8 @@ static void got_ip_event_handler(void *arg, esp_event_base_t event_base,
     }
     *ip_copy = *ip_info;
 
-	xTaskCreate(tcp_server_task, "tcp_server", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
+    init_stream_sockets();
+    xTaskCreate(tcp_server_task, "tcp_server", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
 }
 
 void start_lan(void)

@@ -2,6 +2,13 @@
 
 /*static const char *TAG = "um1_uart";*/
 
+static int tcp_sock = -1;
+static int udp_sock = -1;
+static struct sockaddr_in tcp_dest;
+static struct sockaddr_in udp_dest;
+bool tcp_connected = false;
+bool udp_connected = false;
+
 void start_uart(void){
 	um1_uart_config_t uart1_cfg = global_uart_config[0];
 	um1_uart_config_t uart2_cfg = global_uart_config[1];
@@ -102,12 +109,12 @@ void send_uart_packet_with_timestamp(int uart_port, const uint8_t *data, size_t 
 
     // TCP
     if (global_tcp_config.enabled) {
-        send_tcp_packet(global_tcp_config.server, global_tcp_config.port, uart_port, extended_buffer, total_len);
+        send_tcp_packet(uart_port, extended_buffer, total_len);
     }
 
     // UDP
     if (global_udp_config.enabled) {
-        send_udp_packet(global_udp_config.server, global_udp_config.port, uart_port, extended_buffer, total_len);
+        send_udp_packet(uart_port, extended_buffer, total_len);
     }
 
     // MQTT
@@ -119,43 +126,64 @@ void send_uart_packet_with_timestamp(int uart_port, const uint8_t *data, size_t 
     }
 }
 
-void send_tcp_packet(const char *host, int port, int uart_port, const uint8_t *data, size_t len) {
-    struct sockaddr_in dest;
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock < 0) return;
-
-    dest.sin_family = AF_INET;
-    dest.sin_port = htons(port);
-    inet_pton(AF_INET, host, &dest.sin_addr);
-
-    if (connect(sock, (struct sockaddr *)&dest, sizeof(dest)) != 0) {
-        close(sock);
-        return;
+void init_stream_sockets(void) {
+    if (global_tcp_config.enabled) {
+        tcp_sock = socket(AF_INET, SOCK_STREAM, 0);
+        if (tcp_sock >= 0) {
+            tcp_dest.sin_family = AF_INET;
+            tcp_dest.sin_port = htons(global_tcp_config.port);
+            inet_pton(AF_INET, global_tcp_config.server, &tcp_dest.sin_addr);
+            if (connect(tcp_sock, (struct sockaddr *)&tcp_dest, sizeof(tcp_dest)) == 0) {
+                tcp_connected = true;
+            } else {
+                close(tcp_sock);
+                tcp_sock = -1;
+            }
+        }
     }
 
-    char buffer[BUF_SIZE + 16];
-    int offset = snprintf(buffer, sizeof(buffer), "uart%d:", uart_port);
-    if (offset + len > sizeof(buffer)) len = sizeof(buffer) - offset;
-    memcpy(buffer + offset, data, len);
-    send(sock, buffer, offset + len, 0);
-    close(sock);
+    if (global_udp_config.enabled) {
+        udp_sock = socket(AF_INET, SOCK_DGRAM, 0);
+        if (udp_sock >= 0) {
+            udp_dest.sin_family = AF_INET;
+            udp_dest.sin_port = htons(global_udp_config.port);
+            inet_pton(AF_INET, global_udp_config.server, &udp_dest.sin_addr);
+            if (connect(udp_sock, (struct sockaddr *)&udp_dest, sizeof(udp_dest)) == 0) {
+                udp_connected = true;
+            } else {
+                close(udp_sock);
+                udp_sock = -1;
+            }
+        }
+    }
 }
 
-void send_udp_packet(const char *host, int port, int uart_port, const uint8_t *data, size_t len) {
-    struct sockaddr_in dest;
-    int sock = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sock < 0) return;
-
-    dest.sin_family = AF_INET;
-    dest.sin_port = htons(port);
-    inet_pton(AF_INET, host, &dest.sin_addr);
+void send_tcp_packet(int uart_port, const uint8_t *data, size_t len) {
+    if (!tcp_connected) return;
 
     char buffer[BUF_SIZE + 16];
     int offset = snprintf(buffer, sizeof(buffer), "uart%d:", uart_port);
     if (offset + len > sizeof(buffer)) len = sizeof(buffer) - offset;
     memcpy(buffer + offset, data, len);
-    sendto(sock, buffer, offset + len, 0, (struct sockaddr *)&dest, sizeof(dest));
-    close(sock);
+    if (send(tcp_sock, buffer, offset + len, 0) < 0) {
+        close(tcp_sock);
+        tcp_sock = -1;
+        tcp_connected = false;
+    }
+}
+
+void send_udp_packet(int uart_port, const uint8_t *data, size_t len) {
+    if (!udp_connected) return;
+
+    char buffer[BUF_SIZE + 16];
+    int offset = snprintf(buffer, sizeof(buffer), "uart%d:", uart_port);
+    if (offset + len > sizeof(buffer)) len = sizeof(buffer) - offset;
+    memcpy(buffer + offset, data, len);
+    if (send(udp_sock, buffer, offset + len, 0) < 0) {
+        close(udp_sock);
+        udp_sock = -1;
+        udp_connected = false;
+    }
 }
 
 uint64_t reverse_bytes_u64(uint64_t value) {
