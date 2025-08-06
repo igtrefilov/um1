@@ -1,4 +1,5 @@
 #include "um1_auth.h"
+#include "cJSON.h"
 
 static const char *TAG = "token_auth";
 
@@ -135,6 +136,50 @@ esp_err_t handle_logout(httpd_req_t *req){
     httpd_resp_set_hdr(req, "Set-Cookie", "UM1SESS=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict");
     httpd_resp_sendstr(req, "bye");
     return ESP_OK;
+}
+
+esp_err_t handle_change_password(httpd_req_t *req){
+    token_auth_set_no_store(req);
+    if(!token_is_valid(req)){
+        httpd_resp_set_status(req, "401 Unauthorized");
+        return httpd_resp_sendstr(req, "unauthorized");
+    }
+    char body[256];
+    if(!read_body(req, body, sizeof(body))){
+        httpd_resp_set_status(req, "400 Bad Request");
+        return httpd_resp_sendstr(req, "no body");
+    }
+    char oldp[160]={0}, newp[160]={0};
+    parse_field(body, "old_password", oldp, sizeof(oldp));
+    parse_field(body, "new_password", newp, sizeof(newp));
+    if(strcmp(oldp, TA.pass)!=0){
+        httpd_resp_set_status(req, "403 Forbidden");
+        return httpd_resp_sendstr(req, "wrong password");
+    }
+    strlcpy(TA.pass, newp, sizeof(TA.pass));
+    auth_config.password = strdup(newp);
+
+    FILE *f = fopen("/spiffs/src/config.json", "r");
+    cJSON *root = NULL;
+    if(f){
+        fseek(f,0,SEEK_END); long len=ftell(f); rewind(f);
+        char *buf = malloc(len+1);
+        if(buf){ fread(buf,1,len,f); buf[len]=0; root = cJSON_Parse(buf); free(buf); }
+        fclose(f);
+    }
+    if(!root) root = cJSON_CreateObject();
+    cJSON *auth = cJSON_GetObjectItem(root, "auth");
+    if(!auth){ auth = cJSON_CreateObject(); cJSON_AddItemToObject(root, "auth", auth); }
+    cJSON_ReplaceItemInObject(auth, "username", cJSON_CreateString(TA.user));
+    cJSON_ReplaceItemInObject(auth, "password", cJSON_CreateString(TA.pass));
+    char *out = cJSON_Print(root);
+    f = fopen("/spiffs/src/config.json", "w");
+    if(f){ fwrite(out,1,strlen(out),f); fclose(f); }
+    free(out);
+    cJSON_Delete(root);
+
+    httpd_resp_set_type(req, "application/json");
+    return httpd_resp_sendstr(req, "{\"ok\":true}");
 }
 
 void token_auth_init(void) {

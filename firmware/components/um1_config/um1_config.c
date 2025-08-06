@@ -1,4 +1,5 @@
 #include "include/um1_config.h"
+#include "um1_auth.h"
 
 lan_config_t global_lan_config;
 wifi_config_ap_t global_wifi_config;
@@ -30,6 +31,16 @@ void read_config_and_apply(void)
         ESP_LOGE("CONFIG", "JSON parse error");
         free(data);
         return;
+    }
+
+    cJSON *auth = cJSON_GetObjectItem(root, "auth");
+    if (auth) {
+        cJSON *u = cJSON_GetObjectItem(auth, "username");
+        cJSON *p = cJSON_GetObjectItem(auth, "password");
+        if (u && p) {
+            auth_config.username = strdup(u->valuestring);
+            auth_config.password = strdup(p->valuestring);
+        }
     }
 
     cJSON *lan = cJSON_GetObjectItem(root, "lan");
