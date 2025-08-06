@@ -1,13 +1,13 @@
 # Target labels
  bootloader
 # Source files and their labels
-/home/ilya/esp/ESP32/projects/work/um1/build/CMakeFiles/bootloader
-/home/ilya/esp/ESP32/projects/work/um1/build/CMakeFiles/bootloader.rule
-/home/ilya/esp/ESP32/projects/work/um1/build/CMakeFiles/bootloader-complete.rule
-/home/ilya/esp/ESP32/projects/work/um1/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule
-/home/ilya/esp/ESP32/projects/work/um1/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
-/home/ilya/esp/ESP32/projects/work/um1/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
-/home/ilya/esp/ESP32/projects/work/um1/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
-/home/ilya/esp/ESP32/projects/work/um1/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
-/home/ilya/esp/ESP32/projects/work/um1/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
-/home/ilya/esp/ESP32/projects/work/um1/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule
+/home/ilya/esp/ESP32/projects/work/um1/firmware/build/CMakeFiles/bootloader
+/home/ilya/esp/ESP32/projects/work/um1/firmware/build/CMakeFiles/bootloader.rule
+/home/ilya/esp/ESP32/projects/work/um1/firmware/build/CMakeFiles/bootloader-complete.rule
+/home/ilya/esp/ESP32/projects/work/um1/firmware/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule
+/home/ilya/esp/ESP32/projects/work/um1/firmware/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
+/home/ilya/esp/ESP32/projects/work/um1/firmware/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
+/home/ilya/esp/ESP32/projects/work/um1/firmware/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
+/home/ilya/esp/ESP32/projects/work/um1/firmware/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
+/home/ilya/esp/ESP32/projects/work/um1/firmware/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
+/home/ilya/esp/ESP32/projects/work/um1/firmware/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule

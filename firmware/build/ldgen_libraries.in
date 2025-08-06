@@ -65,9 +65,9 @@ $<TARGET_FILE:__idf_main>
 $<TARGET_FILE:__idf_um1_auth>
 $<TARGET_FILE:__idf_um1_config>
 $<TARGET_FILE:__idf_um1_spiffs>
-$<TARGET_FILE:__idf_um1_lan>
 $<TARGET_FILE:__idf_um1_mqtt>
 $<TARGET_FILE:__idf_um1_sntp>
 $<TARGET_FILE:__idf_um1_uart>
+$<TARGET_FILE:__idf_um1_lan>
 $<TARGET_FILE:__idf_um1_http_server>
 $<TARGET_FILE:__idf_um1_wifi>
