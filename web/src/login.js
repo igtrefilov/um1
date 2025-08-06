@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('login_btn').addEventListener('click', async () => {
+  const btn = document.getElementById('login_btn');
+
+  const doLogin = async () => {
     const u = document.getElementById('login_user').value.trim();
     const p = document.getElementById('login_pass').value.trim();
 
@@ -22,5 +24,16 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
       notify('⚠️ Ошибка соединения', 'error');
     }
+  };
+
+  btn.addEventListener('click', doLogin);
+  ['login_user', 'login_pass'].forEach(id => {
+    const el = document.getElementById(id);
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        doLogin();
+      }
+    });
   });
 });

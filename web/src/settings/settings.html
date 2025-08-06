@@ -65,7 +65,11 @@
       </table>
     </div>
     <div class="card">
-      <h3>Смена пароля</h3>
+      <h3>Логин и пароль</h3>
+      <div class="fld">
+        <label>Новый логин</label>
+        <input type="text" id="new_username" />
+      </div>
       <div class="fld">
         <label>Текущий пароль</label>
         <input type="password" id="old_password" />
@@ -78,7 +82,7 @@
         <label>Подтвердите пароль</label>
         <input type="password" id="confirm_password" />
       </div>
-      <button id="change_pass_btn">Сменить пароль</button>
+      <button id="change_creds_btn">Изменить</button>
     </div>
     <button onclick="collectSettings()">Сохранить настройки</button>
     <pre id="json_output"></pre>
