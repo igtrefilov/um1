@@ -17,6 +17,7 @@ function showNotification(message, isError=false){
   notif.textContent = message;
   notif.className = 'notification' + (isError ? ' error' : ' success');
   notif.style.display = 'block';
+  notif.scrollIntoView({behavior:'smooth', block:'center'});
   setTimeout(()=>notif.style.display='none',3000);
 }
 function collectSettings(){

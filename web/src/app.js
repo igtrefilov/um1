@@ -18,6 +18,7 @@
     box.textContent = msg;
     box.className = 'notification' + (type ? ' ' + type : '');
     box.style.display = 'block';
+    box.scrollIntoView({behavior:'smooth', block:'center'});
     setTimeout(() => box.style.display = 'none', 4000);
   };
   document.addEventListener('DOMContentLoaded', () => {
