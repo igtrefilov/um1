@@ -1,9 +1,13 @@
 {
-	"uart1": {
-	  "baudrate": 115200,
-	  "parity": "none",
-	  "stop_bits": 1
-		},
+        "auth": {
+          "username": "admin",
+          "password": "admin"
+        },
+        "uart1": {
+          "baudrate": 115200,
+          "parity": "none",
+          "stop_bits": 1
+                },
 	"uart2": {
 	  "baudrate": 9600,
 	  "parity": "even",

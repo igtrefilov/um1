@@ -64,4 +64,30 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
   toggleAllFields();
   loadConfigFromServer();
+
+  const btn = document.getElementById('change_pass_btn');
+  if(btn){
+    btn.addEventListener('click', async () => {
+      const oldp = document.getElementById('old_password').value.trim();
+      const newp = document.getElementById('new_password').value.trim();
+      const conf = document.getElementById('confirm_password').value.trim();
+      if(!newp || newp !== conf){
+        showNotification('❌ Пароли не совпадают', true);
+        return;
+      }
+      const body = new URLSearchParams({ old_password: oldp, new_password: newp });
+      try{
+        const r = await fetch('/api/change_password', {
+          method:'POST',
+          headers:{'Content-Type':'application/x-www-form-urlencoded'},
+          body: body.toString(),
+          credentials:'include'
+        });
+        if(r.ok) showNotification('✅ Пароль изменён');
+        else showNotification('❌ Не удалось изменить пароль', true);
+      }catch(_){
+        showNotification('❌ Ошибка соединения', true);
+      }
+    });
+  }
 });

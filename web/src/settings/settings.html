@@ -64,6 +64,22 @@
         <tr><td>Sync Interval (sec):</td><td><input type="number" id="sntp_interval" /></td></tr>
       </table>
     </div>
+    <div class="card">
+      <h3>Смена пароля</h3>
+      <div class="fld">
+        <label>Текущий пароль</label>
+        <input type="password" id="old_password" />
+      </div>
+      <div class="fld">
+        <label>Новый пароль</label>
+        <input type="password" id="new_password" />
+      </div>
+      <div class="fld">
+        <label>Подтвердите пароль</label>
+        <input type="password" id="confirm_password" />
+      </div>
+      <button id="change_pass_btn">Сменить пароль</button>
+    </div>
     <button onclick="collectSettings()">Сохранить настройки</button>
     <pre id="json_output"></pre>
   </div>
