@@ -22,6 +22,7 @@
 #include "um1_lan.h"
 #include "um1_wifi.h"
 #include "um1_http_server.h"
+#include "um1_ssh.h"
 #include "um1_spiffs.h"
 #include "um1_config.h"
 #include "um1_mqtt.h"
@@ -54,10 +55,13 @@ void app_main(void)
 	start_lan();
 	vTaskDelay(pdMS_TO_TICKS(1000));
 
-	start_webserver();
-	vTaskDelay(pdMS_TO_TICKS(1000));
+        start_webserver();
+        vTaskDelay(pdMS_TO_TICKS(1000));
 
-	start_uart();
+        start_ssh_server();
+        vTaskDelay(pdMS_TO_TICKS(1000));
+
+        start_uart();
 	vTaskDelay(pdMS_TO_TICKS(1000));
 
 	start_mqtt();

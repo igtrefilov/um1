@@ -55,5 +55,6 @@ extern stream_config_t global_udp_config;
 extern sntp_config_t global_sntp_config;
 
 void read_config_and_apply(void);
+void save_config(void);
 
 #endif // UM1_CONFIG_H

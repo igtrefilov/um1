@@ -128,3 +128,76 @@ void read_config_and_apply(void)
     free(data);
 }
 
+void save_config(void)
+{
+    cJSON *root = cJSON_CreateObject();
+
+    cJSON *auth = cJSON_CreateObject();
+    cJSON_AddStringToObject(auth, "username", auth_config.username);
+    cJSON_AddStringToObject(auth, "password", auth_config.password);
+    cJSON_AddItemToObject(root, "auth", auth);
+
+    cJSON *lan = cJSON_CreateObject();
+    cJSON_AddBoolToObject(lan, "dhcp", global_lan_config.dhcp);
+    cJSON_AddStringToObject(lan, "static_ip", global_lan_config.static_ip);
+    cJSON_AddStringToObject(lan, "subnet", global_lan_config.subnet);
+    cJSON_AddStringToObject(lan, "gateway", global_lan_config.gateway);
+    cJSON_AddItemToObject(root, "lan", lan);
+
+    cJSON *wifi = cJSON_CreateObject();
+    cJSON_AddBoolToObject(wifi, "enabled", global_wifi_config.enabled);
+    cJSON_AddStringToObject(wifi, "ssid", global_wifi_config.ssid);
+    cJSON_AddStringToObject(wifi, "password", global_wifi_config.password);
+    cJSON_AddStringToObject(wifi, "authmode", global_wifi_config.authmode);
+    cJSON_AddStringToObject(wifi, "mode", global_wifi_config.mode);
+    cJSON_AddItemToObject(root, "wifi", wifi);
+
+    cJSON *uart1 = cJSON_CreateObject();
+    cJSON_AddNumberToObject(uart1, "baudrate", global_uart_config[0].baudrate);
+    cJSON_AddStringToObject(uart1, "parity", global_uart_config[0].parity);
+    cJSON_AddNumberToObject(uart1, "stop_bits", global_uart_config[0].stop_bits);
+    cJSON_AddItemToObject(root, "uart1", uart1);
+
+    cJSON *uart2 = cJSON_CreateObject();
+    cJSON_AddNumberToObject(uart2, "baudrate", global_uart_config[1].baudrate);
+    cJSON_AddStringToObject(uart2, "parity", global_uart_config[1].parity);
+    cJSON_AddNumberToObject(uart2, "stop_bits", global_uart_config[1].stop_bits);
+    cJSON_AddItemToObject(root, "uart2", uart2);
+
+    cJSON *mqtt = cJSON_CreateObject();
+    cJSON_AddBoolToObject(mqtt, "enabled", global_mqtt_config.enabled);
+    cJSON_AddStringToObject(mqtt, "broker", global_mqtt_config.broker);
+    cJSON_AddStringToObject(mqtt, "username", global_mqtt_config.username);
+    cJSON_AddStringToObject(mqtt, "password", global_mqtt_config.password);
+    cJSON_AddItemToObject(root, "mqtt", mqtt);
+
+    cJSON *tcp = cJSON_CreateObject();
+    cJSON_AddBoolToObject(tcp, "enabled", global_tcp_config.enabled);
+    cJSON_AddStringToObject(tcp, "server", global_tcp_config.server);
+    cJSON_AddNumberToObject(tcp, "port", global_tcp_config.port);
+    cJSON_AddItemToObject(root, "tcp", tcp);
+
+    cJSON *udp = cJSON_CreateObject();
+    cJSON_AddBoolToObject(udp, "enabled", global_udp_config.enabled);
+    cJSON_AddStringToObject(udp, "server", global_udp_config.server);
+    cJSON_AddNumberToObject(udp, "port", global_udp_config.port);
+    cJSON_AddItemToObject(root, "udp", udp);
+
+    cJSON *sntp = cJSON_CreateObject();
+    cJSON_AddBoolToObject(sntp, "enabled", global_sntp_config.enabled);
+    cJSON_AddStringToObject(sntp, "server_ip", global_sntp_config.server_ip);
+    cJSON_AddNumberToObject(sntp, "sync_interval_sec", global_sntp_config.sync_interval_sec);
+    cJSON_AddItemToObject(root, "sntp", sntp);
+
+    char *out = cJSON_Print(root);
+    FILE *f = fopen("/spiffs/src/config.json", "w");
+    if (f) {
+        fwrite(out, 1, strlen(out), f);
+        fclose(f);
+    } else {
+        ESP_LOGE("CONFIG", "Failed to open config.json for writing");
+    }
+    free(out);
+    cJSON_Delete(root);
+}
+
