@@ -1,38 +1,53 @@
 {
-        "auth": {
-          "username": "admin",
-          "password": "admin"
-        },
-        "uart1": {
-          "baudrate": 115200,
-          "parity": "none",
-          "stop_bits": 1
-                },
-	"uart2": {
-	  "baudrate": 9600,
-	  "parity": "even",
-	  "stop_bits": 1
-	},
-	"lan":	{
-		"dhcp":	true,
-		"static_ip":	"192.168.0.100",
-		"subnet":	"255.255.255.0",
-		"gateway":	"192.168.0.1"
-	},
-	"wifi":	{
-		"enabled":	true,
-		"mode": "ap",
-		"ssid":	"MyNetwork",
-		"password":	"MyPassword",
-		"authmode": "wpa2"
-	},
-	"mqtt": {
-		"enabled": true,
-		"broker": "mqtt://uhcloud.ru",
-		"username": "igtrefilov",
-		"password": "estrella",
-		"tx_enabled": true
-	},
+  "auth": {
+    "username": "admin",
+    "password": "admin"
+  },
+  "uart1": {
+    "baudrate": 115200,
+    "parity": "none",
+    "stop_bits": 1
+  },
+  "uart2": {
+    "baudrate": 9600,
+    "parity": "even",
+    "stop_bits": 1
+  },
+  "lan": {
+    "dhcp": true,
+    "static_ip": "192.168.0.100",
+    "subnet": "255.255.255.0",
+    "gateway": "192.168.0.1"
+  },
+  "wifi": {
+    "enabled": true,
+    "mode": "apsta",
+    "ap": {
+      "ssid": "MyAP",
+      "password": "ap_pass",
+      "authmode": "wpa2",
+      "dhcp": true,
+      "static_ip": "192.168.4.1",
+      "subnet": "255.255.255.0",
+      "gateway": "192.168.4.1"
+    },
+    "sta": {
+      "ssid": "MyNetwork",
+      "password": "MyPassword",
+      "authmode": "wpa2",
+      "dhcp": true,
+      "static_ip": "192.168.0.50",
+      "subnet": "255.255.255.0",
+      "gateway": "192.168.0.1"
+    }
+  },
+  "mqtt": {
+    "enabled": true,
+    "broker": "mqtt://uhcloud.ru",
+    "username": "igtrefilov",
+    "password": "estrella",
+    "tx_enabled": true
+  },
   "tcp": {
     "enabled": true,
     "server": "192.168.1.100",
@@ -43,9 +58,9 @@
     "server": "",
     "port": 0
   },
-	"sntp": {
-	  "enabled": true,
-	  "server_ip": "pool.ntp.org",
-	  "sync_interval_sec": 3600
-	}
+  "sntp": {
+    "enabled": true,
+    "server_ip": "pool.ntp.org",
+    "sync_interval_sec": 3600
+  }
 }

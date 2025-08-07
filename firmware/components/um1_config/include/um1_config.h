@@ -14,12 +14,21 @@ typedef struct {
 } lan_config_t;
 
 typedef struct {
-    bool enabled;
     char ssid[32];
     char password[64];
     char authmode[16];
+    bool dhcp;
+    char static_ip[16];
+    char subnet[16];
+    char gateway[16];
+} wifi_if_config_t;
+
+typedef struct {
+    bool enabled;
     char mode[8];
-} wifi_config_ap_t;
+    wifi_if_config_t ap;
+    wifi_if_config_t sta;
+} wifi_config_t;
 
 typedef struct {
     int baudrate;
@@ -47,7 +56,7 @@ typedef struct {
 } sntp_config_t;
 
 extern lan_config_t global_lan_config;
-extern wifi_config_ap_t global_wifi_config;
+extern wifi_config_t global_wifi_config;
 extern um1_uart_config_t global_uart_config[2];
 extern mqtt_config_t global_mqtt_config;
 extern stream_config_t global_tcp_config;
