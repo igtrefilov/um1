@@ -143,5 +143,14 @@ body.fullscreen-center {
 .settings-table input[type="password"],
 .settings-table select { width:100%; }
 .server-status { margin-top:16px; }
-.server-status.connected { color:#2e7d32; }
-.server-status.disconnected { color:#b00020; }
+
+.status-dot {
+  display:inline-block;
+  width:10px;
+  height:10px;
+  margin-left:4px;
+  border-radius:50%;
+  background:#b00020;
+}
+
+.status-dot.on { background:#2e7d32; }
