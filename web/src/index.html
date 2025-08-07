@@ -35,7 +35,10 @@
         <label><input type="checkbox" id="uart1" /> uart1</label>
         <label><input type="checkbox" id="uart2" /> uart2</label>
       </div>
-      <div id="server_status" class="server-status" style="display:none;"></div>
+      <div id="server_status" class="server-status" style="display:none;">
+        TCP <span id="tcp_status" class="status-dot"></span>
+        UDP <span id="udp_status" class="status-dot"></span>
+      </div>
     </div>
     <div id="log" class="stream-output"></div>
   </div>

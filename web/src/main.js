@@ -38,17 +38,16 @@ function updateServerStatus() {
   fetch('/api/stream_status')
     .then(r => r.json())
     .then(s => {
-      const el = document.getElementById('server_status');
-      if (!el) return;
-      const connected = s.tcp || s.udp;
-      el.textContent = `TCP: ${s.tcp ? 'подключен' : 'нет'}, UDP: ${s.udp ? 'подключен' : 'нет'}`;
-      el.className = 'server-status ' + (connected ? 'connected' : 'disconnected');
+      const tcp = document.getElementById('tcp_status');
+      const udp = document.getElementById('udp_status');
+      if (tcp) tcp.classList.toggle('on', s.tcp);
+      if (udp) udp.classList.toggle('on', s.udp);
     })
     .catch(_ => {
-      const el = document.getElementById('server_status');
-      if (!el) return;
-      el.textContent = 'TCP: нет, UDP: нет';
-      el.className = 'server-status disconnected';
+      const tcp = document.getElementById('tcp_status');
+      const udp = document.getElementById('udp_status');
+      if (tcp) tcp.classList.remove('on');
+      if (udp) udp.classList.remove('on');
     });
 }
 
@@ -163,8 +162,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const st = document.getElementById('server_status');
         if (st) {
           st.style.display = 'block';
-          st.textContent = 'TCP: нет, UDP: нет';
-          st.className = 'server-status disconnected';
+          const tcp = document.getElementById('tcp_status');
+          const udp = document.getElementById('udp_status');
+          if (tcp) tcp.classList.remove('on');
+          if (udp) udp.classList.remove('on');
           updateServerStatus();
           statusInterval = setInterval(updateServerStatus, 5000);
         }
