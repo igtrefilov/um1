@@ -126,6 +126,8 @@ void start_wifi(void)
     else if (do_ap) mode = WIFI_MODE_AP;
     else mode = WIFI_MODE_STA;
 
+    ESP_ERROR_CHECK(esp_wifi_set_mode(mode));
+
     if (do_ap) {
         wifi_ap_netif = esp_netif_create_default_wifi_ap();
         if (!global_wifi_config.ap.dhcp) {
@@ -172,7 +174,6 @@ void start_wifi(void)
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_cfg));
     }
 
-    ESP_ERROR_CHECK(esp_wifi_set_mode(mode));
     ESP_ERROR_CHECK(esp_wifi_start());
     if (do_sta) {
         ESP_ERROR_CHECK(esp_wifi_connect());
