@@ -2,7 +2,7 @@
 #include "um1_auth.h"
 
 lan_config_t global_lan_config;
-wifi_config_t global_wifi_config;
+um1_wifi_config_t global_wifi_config;
 um1_uart_config_t global_uart_config[2];
 mqtt_config_t global_mqtt_config;
 stream_config_t global_tcp_config;

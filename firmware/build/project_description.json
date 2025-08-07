@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "app-template",
-    "project_version":    "e81b62d-dirty",
+    "project_version":    "4fc7002-dirty",
     "project_path":       "/home/ilya/esp/ESP32/projects/work/um1/firmware",
     "idf_path":           "/home/ilya/esp/esp-idf",
     "build_dir":          "/home/ilya/esp/ESP32/projects/work/um1/firmware/build",
