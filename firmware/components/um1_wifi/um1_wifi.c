@@ -4,13 +4,14 @@
 #define TCP_PORT 4444
 #define LISTEN_BACKLOG 5
 
-static esp_netif_t *wifi_netif = NULL;
+static esp_netif_t *wifi_ap_netif = NULL;
+static esp_netif_t *wifi_sta_netif = NULL;
 
 /* ===== AP MODE ONLY: TCP Server ===== */
 static void wifi_tcp_server_task(void *pvParameters)
 {
     esp_netif_ip_info_t ip_info;
-    ESP_ERROR_CHECK(esp_netif_get_ip_info(wifi_netif, &ip_info));
+    ESP_ERROR_CHECK(esp_netif_get_ip_info(wifi_ap_netif, &ip_info));
 
     int listen_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     if (listen_sock < 0) {
@@ -117,52 +118,65 @@ void start_wifi(void)
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-    wifi_auth_mode_t auth_mode = get_auth_mode(global_wifi_config.authmode);
+    bool do_ap = strcmp(global_wifi_config.mode, "ap") == 0 || strcmp(global_wifi_config.mode, "apsta") == 0;
+    bool do_sta = strcmp(global_wifi_config.mode, "sta") == 0 || strcmp(global_wifi_config.mode, "apsta") == 0;
 
-    if (strcmp(global_wifi_config.mode, "sta") == 0) {
-        esp_netif_t *ap_netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
-        if (ap_netif) {
-            esp_netif_dhcps_stop(ap_netif);
-            esp_netif_destroy(ap_netif);
-            ESP_LOGI(TAG, "AP interface removed to ensure clean STA start");
+    wifi_mode_t mode = WIFI_MODE_NULL;
+    if (do_ap && do_sta) mode = WIFI_MODE_APSTA;
+    else if (do_ap) mode = WIFI_MODE_AP;
+    else mode = WIFI_MODE_STA;
+
+    if (do_ap) {
+        wifi_ap_netif = esp_netif_create_default_wifi_ap();
+        if (!global_wifi_config.ap.dhcp) {
+            esp_netif_dhcps_stop(wifi_ap_netif);
+            esp_netif_ip_info_t ip_info = {0};
+            ip_info.ip.addr = inet_addr(global_wifi_config.ap.static_ip);
+            ip_info.netmask.addr = inet_addr(global_wifi_config.ap.subnet);
+            ip_info.gw.addr = inet_addr(global_wifi_config.ap.gateway);
+            ESP_ERROR_CHECK(esp_netif_set_ip_info(wifi_ap_netif, &ip_info));
         }
+        ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler_ap, NULL, NULL));
 
-        wifi_netif = esp_netif_create_default_wifi_sta();
+        wifi_config_t ap_cfg = {0};
+        strncpy((char *)ap_cfg.ap.ssid, global_wifi_config.ap.ssid, sizeof(ap_cfg.ap.ssid));
+        ap_cfg.ap.ssid_len = strlen(global_wifi_config.ap.ssid);
+        strncpy((char *)ap_cfg.ap.password, global_wifi_config.ap.password, sizeof(ap_cfg.ap.password));
+        ap_cfg.ap.channel = 1;
+        ap_cfg.ap.max_connection = 4;
+        wifi_auth_mode_t ap_auth = get_auth_mode(global_wifi_config.ap.authmode);
+        ap_cfg.ap.authmode = strlen(global_wifi_config.ap.password) == 0 ? WIFI_AUTH_OPEN : ap_auth;
+        ap_cfg.ap.pmf_cfg.required = true;
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_cfg));
+    }
 
+    if (do_sta) {
+        wifi_sta_netif = esp_netif_create_default_wifi_sta();
+        if (!global_wifi_config.sta.dhcp) {
+            esp_netif_dhcpc_stop(wifi_sta_netif);
+            esp_netif_ip_info_t ip_info = {0};
+            ip_info.ip.addr = inet_addr(global_wifi_config.sta.static_ip);
+            ip_info.netmask.addr = inet_addr(global_wifi_config.sta.subnet);
+            ip_info.gw.addr = inet_addr(global_wifi_config.sta.gateway);
+            ESP_ERROR_CHECK(esp_netif_set_ip_info(wifi_sta_netif, &ip_info));
+        }
         ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler_sta, NULL, NULL));
         ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler_sta, NULL, NULL));
 
-        wifi_config_t wifi_config = { 0 };
-        strncpy((char *)wifi_config.sta.ssid, global_wifi_config.ssid, sizeof(wifi_config.sta.ssid));
-        strncpy((char *)wifi_config.sta.password, global_wifi_config.password, sizeof(wifi_config.sta.password));
-        wifi_config.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;
-        wifi_config.sta.threshold.authmode = auth_mode;
-        wifi_config.sta.sae_pwe_h2e = WPA3_SAE_PWE_BOTH;
-
-        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-        ESP_ERROR_CHECK(esp_wifi_start());
-        ESP_ERROR_CHECK(esp_wifi_connect());
-
-        ESP_LOGI(TAG, "Started in STA mode. SSID: %s, Authmode: %d", global_wifi_config.ssid, auth_mode);
-    } else {
-        wifi_netif = esp_netif_create_default_wifi_ap();
-
-        ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler_ap, NULL, NULL));
-
-        wifi_config_t wifi_config = { 0 };
-        strncpy((char *)wifi_config.ap.ssid, global_wifi_config.ssid, sizeof(wifi_config.ap.ssid));
-        wifi_config.ap.ssid_len = strlen(global_wifi_config.ssid);
-        strncpy((char *)wifi_config.ap.password, global_wifi_config.password, sizeof(wifi_config.ap.password));
-        wifi_config.ap.channel = 1;
-        wifi_config.ap.max_connection = 4;
-        wifi_config.ap.authmode = strlen(global_wifi_config.password) == 0 ? WIFI_AUTH_OPEN : auth_mode;
-        wifi_config.ap.pmf_cfg.required = true;
-
-        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
-        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
-        ESP_ERROR_CHECK(esp_wifi_start());
-
-        ESP_LOGI(TAG, "Started in AP mode. SSID: %s, Authmode: %d", global_wifi_config.ssid, wifi_config.ap.authmode);
+        wifi_config_t sta_cfg = {0};
+        strncpy((char *)sta_cfg.sta.ssid, global_wifi_config.sta.ssid, sizeof(sta_cfg.sta.ssid));
+        strncpy((char *)sta_cfg.sta.password, global_wifi_config.sta.password, sizeof(sta_cfg.sta.password));
+        sta_cfg.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;
+        sta_cfg.sta.threshold.authmode = get_auth_mode(global_wifi_config.sta.authmode);
+        sta_cfg.sta.sae_pwe_h2e = WPA3_SAE_PWE_BOTH;
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_cfg));
     }
+
+    ESP_ERROR_CHECK(esp_wifi_set_mode(mode));
+    ESP_ERROR_CHECK(esp_wifi_start());
+    if (do_sta) {
+        ESP_ERROR_CHECK(esp_wifi_connect());
+    }
+
+    ESP_LOGI(TAG, "Started WiFi mode=%s", global_wifi_config.mode);
 }

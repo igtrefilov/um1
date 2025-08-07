@@ -2,7 +2,7 @@
 #include "um1_auth.h"
 
 lan_config_t global_lan_config;
-wifi_config_ap_t global_wifi_config;
+wifi_config_t global_wifi_config;
 um1_uart_config_t global_uart_config[2];
 mqtt_config_t global_mqtt_config;
 stream_config_t global_tcp_config;
@@ -60,16 +60,32 @@ void read_config_and_apply(void)
     cJSON *wifi = cJSON_GetObjectItem(root, "wifi");
     if (wifi) {
         global_wifi_config.enabled = cJSON_GetObjectItem(wifi, "enabled")->valueint;
-        strcpy(global_wifi_config.ssid, cJSON_GetObjectItem(wifi, "ssid")->valuestring);
-        strcpy(global_wifi_config.password, cJSON_GetObjectItem(wifi, "password")->valuestring);
-        strcpy(global_wifi_config.authmode, cJSON_GetObjectItem(wifi, "authmode")->valuestring);
         strcpy(global_wifi_config.mode, cJSON_GetObjectItem(wifi, "mode")->valuestring);
 
-        ESP_LOGI("CONFIG", "WiFi config: enabled=%d, ssid=%s, password=%s, authmode=%s, mode=%s",
+        cJSON *ap = cJSON_GetObjectItem(wifi, "ap");
+        if (ap) {
+            strcpy(global_wifi_config.ap.ssid, cJSON_GetObjectItem(ap, "ssid")->valuestring);
+            strcpy(global_wifi_config.ap.password, cJSON_GetObjectItem(ap, "password")->valuestring);
+            strcpy(global_wifi_config.ap.authmode, cJSON_GetObjectItem(ap, "authmode")->valuestring);
+            global_wifi_config.ap.dhcp = cJSON_GetObjectItem(ap, "dhcp")->valueint;
+            strcpy(global_wifi_config.ap.static_ip, cJSON_GetObjectItem(ap, "static_ip")->valuestring);
+            strcpy(global_wifi_config.ap.subnet, cJSON_GetObjectItem(ap, "subnet")->valuestring);
+            strcpy(global_wifi_config.ap.gateway, cJSON_GetObjectItem(ap, "gateway")->valuestring);
+        }
+
+        cJSON *sta = cJSON_GetObjectItem(wifi, "sta");
+        if (sta) {
+            strcpy(global_wifi_config.sta.ssid, cJSON_GetObjectItem(sta, "ssid")->valuestring);
+            strcpy(global_wifi_config.sta.password, cJSON_GetObjectItem(sta, "password")->valuestring);
+            strcpy(global_wifi_config.sta.authmode, cJSON_GetObjectItem(sta, "authmode")->valuestring);
+            global_wifi_config.sta.dhcp = cJSON_GetObjectItem(sta, "dhcp")->valueint;
+            strcpy(global_wifi_config.sta.static_ip, cJSON_GetObjectItem(sta, "static_ip")->valuestring);
+            strcpy(global_wifi_config.sta.subnet, cJSON_GetObjectItem(sta, "subnet")->valuestring);
+            strcpy(global_wifi_config.sta.gateway, cJSON_GetObjectItem(sta, "gateway")->valuestring);
+        }
+
+        ESP_LOGI("CONFIG", "WiFi config: enabled=%d, mode=%s",
                  global_wifi_config.enabled,
-                 global_wifi_config.ssid,
-                 global_wifi_config.password,
-				 global_wifi_config.authmode,
                  global_wifi_config.mode);
     }
 
