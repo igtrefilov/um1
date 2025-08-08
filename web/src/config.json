@@ -66,5 +66,23 @@
     "enabled": true,
     "server_ip": "pool.ntp.org",
     "sync_interval_sec": 3600
-  }
+  },
+  "routes": [
+    {
+      "source": {
+        "interface": "UART1",
+        "baudrate": 115200,
+        "parity": "none",
+        "bits": 8
+      },
+      "destination": {
+        "interface": "LAN",
+        "protocol": "TCP",
+        "role": "client",
+        "ip": "192.168.0.135",
+        "port": 1234
+      },
+      "active": true
+    }
+  ]
 }

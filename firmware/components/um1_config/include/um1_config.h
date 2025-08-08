@@ -3,6 +3,7 @@
 
 #include <esp_log.h>
 #include <string.h>
+#include <stdbool.h>
 #include "cJSON.h"
 #include "esp_spiffs.h"
 
@@ -58,6 +59,31 @@ typedef struct {
     char server_ip[64];
     int sync_interval_sec;
 } sntp_config_t;
+
+typedef struct {
+    char interface[8];
+    int baudrate;
+    char parity[8];
+    int bits;
+    char protocol[8];
+    char role[8];
+    char ip[16];
+    int port;
+    char topic[64];
+} endpoint_config_t;
+
+typedef struct {
+    endpoint_config_t src;
+    endpoint_config_t dst;
+    bool active;
+} route_config_t;
+
+#define MAX_ROUTES 8
+extern route_config_t global_routes[MAX_ROUTES];
+extern int global_route_count;
+
+bool add_route(route_config_t route);
+bool remove_route(int index);
 
 extern lan_config_t global_lan_config;
 extern um1_wifi_config_t global_wifi_config;

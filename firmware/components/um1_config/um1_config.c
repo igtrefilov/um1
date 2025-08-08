@@ -8,6 +8,10 @@ mqtt_config_t global_mqtt_config;
 stream_config_t global_tcp_config;
 stream_config_t global_udp_config;
 sntp_config_t global_sntp_config;
+route_config_t global_routes[MAX_ROUTES];
+int global_route_count = 0;
+
+static void parse_endpoint(endpoint_config_t *ep, cJSON *obj);
 
 void read_config_and_apply(void)
 {
@@ -150,19 +154,89 @@ void read_config_and_apply(void)
                 strcpy(global_udp_config.role, "client");
             }
         }
-	cJSON *sntp = cJSON_GetObjectItem(root, "sntp");
-	if (sntp) {
-	    global_sntp_config.enabled = cJSON_GetObjectItem(sntp, "enabled")->valueint;
-	    strcpy(global_sntp_config.server_ip, cJSON_GetObjectItem(sntp, "server_ip")->valuestring);
-	    global_sntp_config.sync_interval_sec = cJSON_GetObjectItem(sntp, "sync_interval_sec")->valueint;
+        cJSON *sntp = cJSON_GetObjectItem(root, "sntp");
+        if (sntp) {
+            global_sntp_config.enabled = cJSON_GetObjectItem(sntp, "enabled")->valueint;
+            strcpy(global_sntp_config.server_ip, cJSON_GetObjectItem(sntp, "server_ip")->valuestring);
+            global_sntp_config.sync_interval_sec = cJSON_GetObjectItem(sntp, "sync_interval_sec")->valueint;
 
 	    ESP_LOGI("CONFIG", "SNTP: enabled=%d, server_ip=%s, interval=%d",
 	             global_sntp_config.enabled,
-	             global_sntp_config.server_ip,
-	             global_sntp_config.sync_interval_sec);
-	}
+                     global_sntp_config.server_ip,
+                     global_sntp_config.sync_interval_sec);
+        }
+
+        cJSON *routes = cJSON_GetObjectItem(root, "routes");
+        if (routes && cJSON_IsArray(routes)) {
+            int len = cJSON_GetArraySize(routes);
+            global_route_count = len < MAX_ROUTES ? len : MAX_ROUTES;
+            for (int i = 0; i < global_route_count; i++) {
+                cJSON *rt = cJSON_GetArrayItem(routes, i);
+                if (!rt) continue;
+                cJSON *src = cJSON_GetObjectItem(rt, "source");
+                if (src) parse_endpoint(&global_routes[i].src, src);
+                cJSON *dst = cJSON_GetObjectItem(rt, "destination");
+                if (dst) parse_endpoint(&global_routes[i].dst, dst);
+                cJSON *active = cJSON_GetObjectItem(rt, "active");
+                global_routes[i].active = active ? active->valueint : true;
+            }
+        }
 
     cJSON_Delete(root);
     free(data);
+}
+
+static void parse_endpoint(endpoint_config_t *ep, cJSON *obj)
+{
+    if (!ep || !obj) return;
+    memset(ep, 0, sizeof(*ep));
+
+    cJSON *iface = cJSON_GetObjectItem(obj, "interface");
+    if (iface && cJSON_IsString(iface)) {
+        strncpy(ep->interface, iface->valuestring, sizeof(ep->interface));
+    }
+    cJSON *baud = cJSON_GetObjectItem(obj, "baudrate");
+    if (baud) ep->baudrate = baud->valueint;
+    cJSON *parity = cJSON_GetObjectItem(obj, "parity");
+    if (parity && cJSON_IsString(parity)) {
+        strncpy(ep->parity, parity->valuestring, sizeof(ep->parity));
+    }
+    cJSON *bits = cJSON_GetObjectItem(obj, "bits");
+    if (bits) ep->bits = bits->valueint;
+    cJSON *proto = cJSON_GetObjectItem(obj, "protocol");
+    if (proto && cJSON_IsString(proto)) {
+        strncpy(ep->protocol, proto->valuestring, sizeof(ep->protocol));
+    }
+    cJSON *role = cJSON_GetObjectItem(obj, "role");
+    if (role && cJSON_IsString(role)) {
+        strncpy(ep->role, role->valuestring, sizeof(ep->role));
+    }
+    cJSON *ip = cJSON_GetObjectItem(obj, "ip");
+    if (ip && cJSON_IsString(ip)) {
+        strncpy(ep->ip, ip->valuestring, sizeof(ep->ip));
+    }
+    cJSON *port = cJSON_GetObjectItem(obj, "port");
+    if (port) ep->port = port->valueint;
+    cJSON *topic = cJSON_GetObjectItem(obj, "topic");
+    if (topic && cJSON_IsString(topic)) {
+        strncpy(ep->topic, topic->valuestring, sizeof(ep->topic));
+    }
+}
+
+bool add_route(route_config_t route)
+{
+    if (global_route_count >= MAX_ROUTES) return false;
+    global_routes[global_route_count++] = route;
+    return true;
+}
+
+bool remove_route(int index)
+{
+    if (index < 0 || index >= global_route_count) return false;
+    for (int i = index; i < global_route_count - 1; ++i) {
+        global_routes[i] = global_routes[i + 1];
+    }
+    global_route_count--;
+    return true;
 }
 
