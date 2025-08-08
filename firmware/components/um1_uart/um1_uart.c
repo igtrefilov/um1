@@ -15,7 +15,7 @@ bool tcp_connected = false;
 bool udp_connected = false;
 
 static void process_stream_buffer(const char *buf, int len);
-static void route_data(const char *src_if, const uint8_t *data, size_t len);
+void route_data(const char *src_if, const uint8_t *data, size_t len);
 static void tcp_client_task(void *arg);
 static void tcp_server_task(void *arg);
 static void udp_client_task(void *arg);
@@ -225,7 +225,7 @@ void send_udp_packet(int uart_port, const uint8_t *data, size_t len) {
     }
 }
 
-static void route_data(const char *src_if, const uint8_t *data, size_t len) {
+void route_data(const char *src_if, const uint8_t *data, size_t len) {
     int src_uart_port = -1;
     if (strcasecmp(src_if, "UART1") == 0) src_uart_port = UART_PORT_NUM_1;
     else if (strcasecmp(src_if, "UART2") == 0) src_uart_port = UART_PORT_NUM_2;
@@ -235,7 +235,9 @@ static void route_data(const char *src_if, const uint8_t *data, size_t len) {
         if (!r->active) continue;
         if (strcasecmp(r->src.interface, src_if) != 0) continue;
 
-        if (strcasecmp(r->dst.interface, "LAN") == 0) {
+        if (strcasecmp(r->dst.interface, "LAN") == 0 ||
+            strcasecmp(r->dst.interface, "AP") == 0 ||
+            strcasecmp(r->dst.interface, "STA") == 0) {
             if (global_tcp_config.enabled) {
                 send_tcp_packet(src_uart_port, data, len);
             }

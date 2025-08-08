@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <unistd.h>
+#include "um1_uart.h"
 
 #define TCP_PORT  3333
 #define LISTEN_BACKLOG 5
@@ -79,6 +80,7 @@ void handle_client(int client_sock) {
     }
     cmd[len] = '\0';
     ESP_LOGI(TAG, "Received cmd: '%s'", cmd);
+    route_data("LAN", (uint8_t *)cmd, len);
 
     if (strncmp(cmd, "TREE ", 5) == 0) {
         char dir[128];
@@ -143,6 +145,7 @@ void handle_client(int client_sock) {
                 int to_read = rem > CHUNK_SZ ? CHUNK_SZ : rem;
                 int r = recv(client_sock, buf, to_read, 0);
                 if (r <= 0) break;
+                route_data("LAN", buf, r);
                 fwrite(buf, 1, r, f);
                 rem -= r;
             }
@@ -170,6 +173,7 @@ void handle_client(int client_sock) {
                         int r = fread(buf, 1, to_read, f);
                         if (r <= 0) break;
                         send(client_sock, buf, r, 0);
+                        route_data("LAN", buf, r);
                         sent += r;
                     }
                     fclose(f);
