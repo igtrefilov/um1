@@ -24,12 +24,6 @@
 void start_uart(void);
 void uart1_task(void *arg);
 void uart2_task(void *arg);
-void init_stream_sockets(void);
 void send_uart_packet_with_timestamp(int uart_port, const uint8_t *data, size_t len);
-void send_tcp_packet(int uart_port, const uint8_t *data, size_t len);
-void send_udp_packet(int uart_port, const uint8_t *data, size_t len);
 void route_data(const char *src_if, const uint8_t *data, size_t len);
 uint64_t reverse_bytes_u64(uint64_t value);
-
-extern bool tcp_connected;
-extern bool udp_connected;
