@@ -6,7 +6,6 @@
 
 #include "um1_http_server.h"
 #include "um1_config.h"
-#include "um1_mqtt.h"
 #include "um1_sntp.h"
 
 #define UART1_TXD 2
@@ -25,5 +24,4 @@ void start_uart(void);
 void uart1_task(void *arg);
 void uart2_task(void *arg);
 void send_uart_packet_with_timestamp(int uart_port, const uint8_t *data, size_t len);
-void route_data(const char *src_if, const uint8_t *data, size_t len);
 uint64_t reverse_bytes_u64(uint64_t value);
