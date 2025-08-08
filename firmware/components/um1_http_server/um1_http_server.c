@@ -1,4 +1,5 @@
 #include "um1_http_server.h"
+#include "um1_lan.h"
 
 #define MAX_SUBSCRIBERS 10
 #define UPLOAD_BUFFER_SIZE  1024

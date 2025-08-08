@@ -15,7 +15,6 @@
 #include "start_lan.h"
 #include "um1_lan.h"
 #include "um1_config.h"
-#include "um1_uart.h"
 
 static const char *TAG = "eth_if";
 
