@@ -8,6 +8,10 @@ mqtt_config_t global_mqtt_config;
 stream_config_t global_tcp_config;
 stream_config_t global_udp_config;
 sntp_config_t global_sntp_config;
+route_config_t global_routes[MAX_ROUTES];
+int global_route_count = 0;
+
+static void parse_endpoint(endpoint_config_t *ep, cJSON *obj);
 
 void read_config_and_apply(void)
 {
@@ -103,44 +107,136 @@ void read_config_and_apply(void)
 		global_uart_config[1].stop_bits = cJSON_GetObjectItem(uart2, "stop_bits")->valueint;
 	}
 
-	cJSON *mqtt = cJSON_GetObjectItem(root, "mqtt");
-	if (mqtt) {
-	    global_mqtt_config.enabled = cJSON_GetObjectItem(mqtt, "enabled")->valueint;
-	    strcpy(global_mqtt_config.broker, cJSON_GetObjectItem(mqtt, "broker")->valuestring);
-	    strcpy(global_mqtt_config.username, cJSON_GetObjectItem(mqtt, "username")->valuestring);
-	    strcpy(global_mqtt_config.password, cJSON_GetObjectItem(mqtt, "password")->valuestring);
+        cJSON *mqtt = cJSON_GetObjectItem(root, "mqtt");
+        if (mqtt) {
+            global_mqtt_config.enabled = cJSON_GetObjectItem(mqtt, "enabled")->valueint;
+            strcpy(global_mqtt_config.broker, cJSON_GetObjectItem(mqtt, "broker")->valuestring);
+            strcpy(global_mqtt_config.username, cJSON_GetObjectItem(mqtt, "username")->valuestring);
+            strcpy(global_mqtt_config.password, cJSON_GetObjectItem(mqtt, "password")->valuestring);
+            cJSON *tx_en = cJSON_GetObjectItem(mqtt, "tx_enabled");
+            global_mqtt_config.tx_enabled = tx_en ? tx_en->valueint : false;
+            cJSON *rx_en = cJSON_GetObjectItem(mqtt, "rx_enabled");
+            global_mqtt_config.rx_enabled = rx_en ? rx_en->valueint : false;
+            cJSON *topic = cJSON_GetObjectItem(mqtt, "topic");
+            if (topic) {
+                strcpy(global_mqtt_config.topic, topic->valuestring);
+            } else {
+                global_mqtt_config.topic[0] = '\0';
+            }
 
-	    ESP_LOGI("CONFIG", "MQTT: enabled=%d, broker=%s, user=%s",
-	             global_mqtt_config.enabled,
-	             global_mqtt_config.broker,
-	             global_mqtt_config.username);
-	}
-	cJSON *tcp = cJSON_GetObjectItem(root, "tcp");
-	if (tcp) {
-	    global_tcp_config.enabled = cJSON_GetObjectItem(tcp, "enabled")->valueint;
-	    strcpy(global_tcp_config.server, cJSON_GetObjectItem(tcp, "server")->valuestring);
-	    global_tcp_config.port = cJSON_GetObjectItem(tcp, "port")->valueint;
-	}
+            ESP_LOGI("CONFIG", "MQTT: enabled=%d, broker=%s, user=%s",
+                     global_mqtt_config.enabled,
+                     global_mqtt_config.broker,
+                     global_mqtt_config.username);
+        }
+        cJSON *tcp = cJSON_GetObjectItem(root, "tcp");
+        if (tcp) {
+            global_tcp_config.enabled = cJSON_GetObjectItem(tcp, "enabled")->valueint;
+            strcpy(global_tcp_config.server, cJSON_GetObjectItem(tcp, "server")->valuestring);
+            global_tcp_config.port = cJSON_GetObjectItem(tcp, "port")->valueint;
+            cJSON *role = cJSON_GetObjectItem(tcp, "role");
+            if (role) {
+                strcpy(global_tcp_config.role, role->valuestring);
+            } else {
+                strcpy(global_tcp_config.role, "client");
+            }
+        }
 
-	cJSON *udp = cJSON_GetObjectItem(root, "udp");
-	if (udp) {
-	    global_udp_config.enabled = cJSON_GetObjectItem(udp, "enabled")->valueint;
-	    strcpy(global_udp_config.server, cJSON_GetObjectItem(udp, "server")->valuestring);
-	    global_udp_config.port = cJSON_GetObjectItem(udp, "port")->valueint;
-	}
-	cJSON *sntp = cJSON_GetObjectItem(root, "sntp");
-	if (sntp) {
-	    global_sntp_config.enabled = cJSON_GetObjectItem(sntp, "enabled")->valueint;
-	    strcpy(global_sntp_config.server_ip, cJSON_GetObjectItem(sntp, "server_ip")->valuestring);
-	    global_sntp_config.sync_interval_sec = cJSON_GetObjectItem(sntp, "sync_interval_sec")->valueint;
+        cJSON *udp = cJSON_GetObjectItem(root, "udp");
+        if (udp) {
+            global_udp_config.enabled = cJSON_GetObjectItem(udp, "enabled")->valueint;
+            strcpy(global_udp_config.server, cJSON_GetObjectItem(udp, "server")->valuestring);
+            global_udp_config.port = cJSON_GetObjectItem(udp, "port")->valueint;
+            cJSON *role = cJSON_GetObjectItem(udp, "role");
+            if (role) {
+                strcpy(global_udp_config.role, role->valuestring);
+            } else {
+                strcpy(global_udp_config.role, "client");
+            }
+        }
+        cJSON *sntp = cJSON_GetObjectItem(root, "sntp");
+        if (sntp) {
+            global_sntp_config.enabled = cJSON_GetObjectItem(sntp, "enabled")->valueint;
+            strcpy(global_sntp_config.server_ip, cJSON_GetObjectItem(sntp, "server_ip")->valuestring);
+            global_sntp_config.sync_interval_sec = cJSON_GetObjectItem(sntp, "sync_interval_sec")->valueint;
 
 	    ESP_LOGI("CONFIG", "SNTP: enabled=%d, server_ip=%s, interval=%d",
 	             global_sntp_config.enabled,
-	             global_sntp_config.server_ip,
-	             global_sntp_config.sync_interval_sec);
-	}
+                     global_sntp_config.server_ip,
+                     global_sntp_config.sync_interval_sec);
+        }
+
+        cJSON *routes = cJSON_GetObjectItem(root, "routes");
+        if (routes && cJSON_IsArray(routes)) {
+            int len = cJSON_GetArraySize(routes);
+            global_route_count = len < MAX_ROUTES ? len : MAX_ROUTES;
+            for (int i = 0; i < global_route_count; i++) {
+                cJSON *rt = cJSON_GetArrayItem(routes, i);
+                if (!rt) continue;
+                cJSON *src = cJSON_GetObjectItem(rt, "source");
+                if (src) parse_endpoint(&global_routes[i].src, src);
+                cJSON *dst = cJSON_GetObjectItem(rt, "destination");
+                if (dst) parse_endpoint(&global_routes[i].dst, dst);
+                cJSON *active = cJSON_GetObjectItem(rt, "active");
+                global_routes[i].active = active ? active->valueint : true;
+            }
+        }
 
     cJSON_Delete(root);
     free(data);
+}
+
+static void parse_endpoint(endpoint_config_t *ep, cJSON *obj)
+{
+    if (!ep || !obj) return;
+    memset(ep, 0, sizeof(*ep));
+
+    cJSON *iface = cJSON_GetObjectItem(obj, "interface");
+    if (iface && cJSON_IsString(iface)) {
+        strncpy(ep->interface, iface->valuestring, sizeof(ep->interface));
+    }
+    cJSON *baud = cJSON_GetObjectItem(obj, "baudrate");
+    if (baud) ep->baudrate = baud->valueint;
+    cJSON *parity = cJSON_GetObjectItem(obj, "parity");
+    if (parity && cJSON_IsString(parity)) {
+        strncpy(ep->parity, parity->valuestring, sizeof(ep->parity));
+    }
+    cJSON *bits = cJSON_GetObjectItem(obj, "bits");
+    if (bits) ep->bits = bits->valueint;
+    cJSON *proto = cJSON_GetObjectItem(obj, "protocol");
+    if (proto && cJSON_IsString(proto)) {
+        strncpy(ep->protocol, proto->valuestring, sizeof(ep->protocol));
+    }
+    cJSON *role = cJSON_GetObjectItem(obj, "role");
+    if (role && cJSON_IsString(role)) {
+        strncpy(ep->role, role->valuestring, sizeof(ep->role));
+    }
+    cJSON *ip = cJSON_GetObjectItem(obj, "ip");
+    if (ip && cJSON_IsString(ip)) {
+        strncpy(ep->ip, ip->valuestring, sizeof(ep->ip));
+    }
+    cJSON *port = cJSON_GetObjectItem(obj, "port");
+    if (port) ep->port = port->valueint;
+    cJSON *topic = cJSON_GetObjectItem(obj, "topic");
+    if (topic && cJSON_IsString(topic)) {
+        strncpy(ep->topic, topic->valuestring, sizeof(ep->topic));
+    }
+}
+
+bool add_route(route_config_t route)
+{
+    if (global_route_count >= MAX_ROUTES) return false;
+    global_routes[global_route_count++] = route;
+    return true;
+}
+
+bool remove_route(int index)
+{
+    if (index < 0 || index >= global_route_count) return false;
+    for (int i = index; i < global_route_count - 1; ++i) {
+        global_routes[i] = global_routes[i + 1];
+    }
+    global_route_count--;
+    return true;
 }
 

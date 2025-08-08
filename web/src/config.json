@@ -46,21 +46,43 @@
     "broker": "mqtt://uhcloud.ru",
     "username": "igtrefilov",
     "password": "estrella",
-    "tx_enabled": true
+    "tx_enabled": true,
+    "rx_enabled": false,
+    "topic": "uart/#"
   },
   "tcp": {
     "enabled": true,
     "server": "192.168.1.100",
-    "port": 1234
+    "port": 1234,
+    "role": "client"
   },
   "udp": {
     "enabled": false,
     "server": "",
-    "port": 0
+    "port": 0,
+    "role": "client"
   },
   "sntp": {
     "enabled": true,
     "server_ip": "pool.ntp.org",
     "sync_interval_sec": 3600
-  }
+  },
+  "routes": [
+    {
+      "source": {
+        "interface": "UART1",
+        "baudrate": 115200,
+        "parity": "none",
+        "bits": 8
+      },
+      "destination": {
+        "interface": "LAN",
+        "protocol": "TCP",
+        "role": "client",
+        "ip": "192.168.0.135",
+        "port": 1234
+      },
+      "active": true
+    }
+  ]
 }
