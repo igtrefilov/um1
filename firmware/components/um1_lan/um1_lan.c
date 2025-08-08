@@ -6,7 +6,10 @@
 #include <lwip/sockets.h>
 #include <lwip/inet.h>
 #include <strings.h>
-#include "um1_uart.h"
+#include <driver/uart.h>
+#include "um1_router.h"
+#define UART_PORT_NUM_1 1
+#define UART_PORT_NUM_2 2
 
 #define TCP_PORT  3333
 #define LISTEN_BACKLOG 5
