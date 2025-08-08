@@ -2,6 +2,7 @@
 #include <string.h>
 #include <lwip/sockets.h>
 #include <lwip/inet.h>
+#include <strings.h>
 
 /*static const char *TAG = "um1_uart";*/
 
@@ -14,6 +15,7 @@ bool tcp_connected = false;
 bool udp_connected = false;
 
 static void process_stream_buffer(const char *buf, int len);
+static void route_data(const char *src_if, const uint8_t *data, size_t len);
 static void tcp_client_task(void *arg);
 static void tcp_server_task(void *arg);
 static void udp_client_task(void *arg);
@@ -117,23 +119,9 @@ void send_uart_packet_with_timestamp(int uart_port, const uint8_t *data, size_t 
     // WebSocket
     send_uart_ws_data(uart_port, extended_buffer, total_len);
 
-    // TCP
-    if (global_tcp_config.enabled) {
-        send_tcp_packet(uart_port, extended_buffer, total_len);
-    }
-
-    // UDP
-    if (global_udp_config.enabled) {
-        send_udp_packet(uart_port, extended_buffer, total_len);
-    }
-
-    // MQTT
-    esp_mqtt_client_handle_t client = get_mqtt_client_handle();
-    if (client != NULL && global_mqtt_config.enabled && global_mqtt_config.tx_enabled) {
-        char topic[16];
-        snprintf(topic, sizeof(topic), "uart/%d", uart_port);
-        esp_mqtt_client_publish(client, topic, (const char *)extended_buffer, total_len, 1, 0);
-    }
+    // Route to other interfaces according to routing table
+    route_data(uart_port == UART_PORT_NUM_1 ? "UART1" : "UART2",
+               extended_buffer, total_len);
 }
 
 void init_stream_sockets(void) {
@@ -207,7 +195,10 @@ void send_tcp_packet(int uart_port, const uint8_t *data, size_t len) {
     if (!tcp_connected) return;
 
     char buffer[BUF_SIZE + 16];
-    int offset = snprintf(buffer, sizeof(buffer), "uart%d:", uart_port);
+    int offset = 0;
+    if (uart_port >= 0) {
+        offset = snprintf(buffer, sizeof(buffer), "uart%d:", uart_port);
+    }
     if (offset + len > sizeof(buffer)) len = sizeof(buffer) - offset;
     memcpy(buffer + offset, data, len);
     if (send(tcp_sock, buffer, offset + len, 0) < 0) {
@@ -221,13 +212,55 @@ void send_udp_packet(int uart_port, const uint8_t *data, size_t len) {
     if (!udp_connected) return;
 
     char buffer[BUF_SIZE + 16];
-    int offset = snprintf(buffer, sizeof(buffer), "uart%d:", uart_port);
+    int offset = 0;
+    if (uart_port >= 0) {
+        offset = snprintf(buffer, sizeof(buffer), "uart%d:", uart_port);
+    }
     if (offset + len > sizeof(buffer)) len = sizeof(buffer) - offset;
     memcpy(buffer + offset, data, len);
     if (send(udp_sock, buffer, offset + len, 0) < 0) {
         close(udp_sock);
         udp_sock = -1;
         udp_connected = false;
+    }
+}
+
+static void route_data(const char *src_if, const uint8_t *data, size_t len) {
+    int src_uart_port = -1;
+    if (strcasecmp(src_if, "UART1") == 0) src_uart_port = UART_PORT_NUM_1;
+    else if (strcasecmp(src_if, "UART2") == 0) src_uart_port = UART_PORT_NUM_2;
+
+    for (int i = 0; i < global_route_count; ++i) {
+        route_config_t *r = &global_routes[i];
+        if (!r->active) continue;
+        if (strcasecmp(r->src.interface, src_if) != 0) continue;
+
+        if (strcasecmp(r->dst.interface, "LAN") == 0) {
+            if (global_tcp_config.enabled) {
+                send_tcp_packet(src_uart_port, data, len);
+            }
+            if (global_udp_config.enabled) {
+                send_udp_packet(src_uart_port, data, len);
+            }
+        } else if (strcasecmp(r->dst.interface, "MQTT") == 0 || strcasecmp(r->dst.protocol, "MQTT") == 0) {
+            esp_mqtt_client_handle_t client = get_mqtt_client_handle();
+            if (client != NULL && global_mqtt_config.enabled && global_mqtt_config.tx_enabled) {
+                const char *topic;
+                if (r->dst.topic[0]) {
+                    topic = r->dst.topic;
+                } else if (src_uart_port == UART_PORT_NUM_1) {
+                    topic = "uart/1";
+                } else if (src_uart_port == UART_PORT_NUM_2) {
+                    topic = "uart/2";
+                } else {
+                    topic = "data";
+                }
+                esp_mqtt_client_publish(client, topic, (const char *)data, len, 1, 0);
+            }
+        } else if (strcasecmp(r->dst.interface, "UART1") == 0 || strcasecmp(r->dst.interface, "UART2") == 0) {
+            int dst_port = (strcasecmp(r->dst.interface, "UART1") == 0) ? UART_PORT_NUM_1 : UART_PORT_NUM_2;
+            uart_write_bytes(dst_port, (const char *)data, len);
+        }
     }
 }
 
@@ -245,6 +278,8 @@ static void tcp_client_task(void *arg) {
     while (1) {
         int len = recv(tcp_sock, buffer, sizeof(buffer), 0);
         if (len <= 0) break;
+        route_data("LAN", (uint8_t *)buffer, len);
+        route_data("AP", (uint8_t *)buffer, len);
         process_stream_buffer(buffer, len);
     }
     close(tcp_sock);
@@ -263,6 +298,8 @@ static void tcp_server_task(void *arg) {
         while (1) {
             int len = recv(client, buffer, sizeof(buffer), 0);
             if (len <= 0) break;
+            route_data("LAN", (uint8_t *)buffer, len);
+            route_data("AP", (uint8_t *)buffer, len);
             process_stream_buffer(buffer, len);
         }
         close(client);
@@ -276,6 +313,8 @@ static void udp_client_task(void *arg) {
     while (1) {
         int len = recv(udp_sock, buffer, sizeof(buffer), 0);
         if (len <= 0) break;
+        route_data("LAN", (uint8_t *)buffer, len);
+        route_data("AP", (uint8_t *)buffer, len);
         process_stream_buffer(buffer, len);
     }
     close(udp_sock);
@@ -292,6 +331,8 @@ static void udp_server_task(void *arg) {
         int len = recvfrom(udp_sock, buffer, sizeof(buffer), 0,
                            (struct sockaddr *)&src_addr, &addrlen);
         if (len < 0) break;
+        route_data("LAN", (uint8_t *)buffer, len);
+        route_data("AP", (uint8_t *)buffer, len);
         process_stream_buffer(buffer, len);
     }
     close(udp_sock);
