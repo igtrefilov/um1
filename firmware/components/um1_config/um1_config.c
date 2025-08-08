@@ -103,31 +103,53 @@ void read_config_and_apply(void)
 		global_uart_config[1].stop_bits = cJSON_GetObjectItem(uart2, "stop_bits")->valueint;
 	}
 
-	cJSON *mqtt = cJSON_GetObjectItem(root, "mqtt");
-	if (mqtt) {
-	    global_mqtt_config.enabled = cJSON_GetObjectItem(mqtt, "enabled")->valueint;
-	    strcpy(global_mqtt_config.broker, cJSON_GetObjectItem(mqtt, "broker")->valuestring);
-	    strcpy(global_mqtt_config.username, cJSON_GetObjectItem(mqtt, "username")->valuestring);
-	    strcpy(global_mqtt_config.password, cJSON_GetObjectItem(mqtt, "password")->valuestring);
+        cJSON *mqtt = cJSON_GetObjectItem(root, "mqtt");
+        if (mqtt) {
+            global_mqtt_config.enabled = cJSON_GetObjectItem(mqtt, "enabled")->valueint;
+            strcpy(global_mqtt_config.broker, cJSON_GetObjectItem(mqtt, "broker")->valuestring);
+            strcpy(global_mqtt_config.username, cJSON_GetObjectItem(mqtt, "username")->valuestring);
+            strcpy(global_mqtt_config.password, cJSON_GetObjectItem(mqtt, "password")->valuestring);
+            cJSON *tx_en = cJSON_GetObjectItem(mqtt, "tx_enabled");
+            global_mqtt_config.tx_enabled = tx_en ? tx_en->valueint : false;
+            cJSON *rx_en = cJSON_GetObjectItem(mqtt, "rx_enabled");
+            global_mqtt_config.rx_enabled = rx_en ? rx_en->valueint : false;
+            cJSON *topic = cJSON_GetObjectItem(mqtt, "topic");
+            if (topic) {
+                strcpy(global_mqtt_config.topic, topic->valuestring);
+            } else {
+                global_mqtt_config.topic[0] = '\0';
+            }
 
-	    ESP_LOGI("CONFIG", "MQTT: enabled=%d, broker=%s, user=%s",
-	             global_mqtt_config.enabled,
-	             global_mqtt_config.broker,
-	             global_mqtt_config.username);
-	}
-	cJSON *tcp = cJSON_GetObjectItem(root, "tcp");
-	if (tcp) {
-	    global_tcp_config.enabled = cJSON_GetObjectItem(tcp, "enabled")->valueint;
-	    strcpy(global_tcp_config.server, cJSON_GetObjectItem(tcp, "server")->valuestring);
-	    global_tcp_config.port = cJSON_GetObjectItem(tcp, "port")->valueint;
-	}
+            ESP_LOGI("CONFIG", "MQTT: enabled=%d, broker=%s, user=%s",
+                     global_mqtt_config.enabled,
+                     global_mqtt_config.broker,
+                     global_mqtt_config.username);
+        }
+        cJSON *tcp = cJSON_GetObjectItem(root, "tcp");
+        if (tcp) {
+            global_tcp_config.enabled = cJSON_GetObjectItem(tcp, "enabled")->valueint;
+            strcpy(global_tcp_config.server, cJSON_GetObjectItem(tcp, "server")->valuestring);
+            global_tcp_config.port = cJSON_GetObjectItem(tcp, "port")->valueint;
+            cJSON *role = cJSON_GetObjectItem(tcp, "role");
+            if (role) {
+                strcpy(global_tcp_config.role, role->valuestring);
+            } else {
+                strcpy(global_tcp_config.role, "client");
+            }
+        }
 
-	cJSON *udp = cJSON_GetObjectItem(root, "udp");
-	if (udp) {
-	    global_udp_config.enabled = cJSON_GetObjectItem(udp, "enabled")->valueint;
-	    strcpy(global_udp_config.server, cJSON_GetObjectItem(udp, "server")->valuestring);
-	    global_udp_config.port = cJSON_GetObjectItem(udp, "port")->valueint;
-	}
+        cJSON *udp = cJSON_GetObjectItem(root, "udp");
+        if (udp) {
+            global_udp_config.enabled = cJSON_GetObjectItem(udp, "enabled")->valueint;
+            strcpy(global_udp_config.server, cJSON_GetObjectItem(udp, "server")->valuestring);
+            global_udp_config.port = cJSON_GetObjectItem(udp, "port")->valueint;
+            cJSON *role = cJSON_GetObjectItem(udp, "role");
+            if (role) {
+                strcpy(global_udp_config.role, role->valuestring);
+            } else {
+                strcpy(global_udp_config.role, "client");
+            }
+        }
 	cJSON *sntp = cJSON_GetObjectItem(root, "sntp");
 	if (sntp) {
 	    global_sntp_config.enabled = cJSON_GetObjectItem(sntp, "enabled")->valueint;

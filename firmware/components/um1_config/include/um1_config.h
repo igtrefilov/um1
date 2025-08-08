@@ -41,12 +41,16 @@ typedef struct {
     char broker[64];
     char username[32];
     char password[32];
+    bool tx_enabled;
+    bool rx_enabled;
+    char topic[64];
 } mqtt_config_t;
 
 typedef struct {
     bool enabled;
     char server[64];
     int port;
+    char role[8];
 } stream_config_t;
 
 typedef struct {
