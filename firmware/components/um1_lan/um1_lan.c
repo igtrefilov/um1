@@ -205,7 +205,7 @@ void handle_client_task(void *pvParameters) {
     vTaskDelete(NULL);
 }
 
-void tcp_server_task(void *pvParameters) {
+void tcp_lan_server_task(void *pvParameters) {
     esp_netif_ip_info_t *ip_info = (esp_netif_ip_info_t *)pvParameters;
     int listen_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     if (listen_sock < 0) {
@@ -264,7 +264,7 @@ void tcp_server_task(void *pvParameters) {
     vTaskDelete(NULL);
 }
 
-void udp_server_task(void *pvParameters) {
+void udp_lan_server_task(void *pvParameters) {
     esp_netif_ip_info_t *ip_info = (esp_netif_ip_info_t *)pvParameters;
     int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
     if (sock < 0) {
