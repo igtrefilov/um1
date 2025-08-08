@@ -1,10 +1,18 @@
+let wifiAPEnabled = true;
+let wifiSTAEnabled = true;
+let mqttEnabled = true;
+
 function createInterfaceSelect(cls, value=''){
   const sel = document.createElement('select');
   sel.className = cls;
-  ['','UART1','UART2','LAN','AP','STA'].forEach(v=>{
+  const opts = ['','UART1','UART2','LAN'];
+  if(wifiAPEnabled || value==='AP') opts.push('AP');
+  if(wifiSTAEnabled || value==='STA') opts.push('STA');
+  opts.forEach(v=>{
     const opt = document.createElement('option');
     opt.value = v;
     opt.textContent = v || '—';
+    if((v==='AP' && !wifiAPEnabled) || (v==='STA' && !wifiSTAEnabled)) opt.disabled = true;
     if(v===value) opt.selected = true;
     sel.appendChild(opt);
   });
@@ -21,7 +29,8 @@ function updateEndpointExtra(sel){
            `Parity: <select class="${prefix}-parity"><option value="none">none</option><option value="even">even</option><option value="odd">odd</option></select> `+
            `Bits: <select class="${prefix}-bits"><option value="8">8</option><option value="7">7</option></select>`;
   }else if(['LAN','AP','STA'].includes(val)){
-    html = `Protocol: <select class="${prefix}-protocol"><option value="TCP">TCP</option><option value="UDP">UDP</option><option value="MQTT">MQTT</option></select> <span class="${prefix}-proto-extra"></span>`;
+    const mqttOpt = `<option value="MQTT"${mqttEnabled?'':' disabled'}>MQTT</option>`;
+    html = `Protocol: <select class="${prefix}-protocol"><option value="TCP">TCP</option><option value="UDP">UDP</option>${mqttOpt}</select> <span class="${prefix}-proto-extra"></span>`;
   }
   container.innerHTML = html;
   if(['LAN','AP','STA'].includes(val)){
@@ -63,8 +72,17 @@ function addRow(route){
   tr.appendChild(tdDst);
 
   const tdAct = document.createElement('td');
+  let active = route?.active !== false;
+  const toggle = document.createElement('button');
+  toggle.className = 'route-toggle';
+  toggle.dataset.active = active ? 'true' : 'false';
+  const updateToggle = ()=>{ toggle.textContent = active ? 'Suspend' : 'Activate'; };
+  updateToggle();
+  toggle.addEventListener('click', ()=>{ active = !active; toggle.dataset.active = active ? 'true' : 'false'; updateToggle(); });
+  tdAct.appendChild(toggle);
+
   const rm = document.createElement('button');
-  rm.textContent = 'Удалить';
+  rm.textContent = 'Delete';
   rm.addEventListener('click', ()=>tr.remove());
   tdAct.appendChild(rm);
   tr.appendChild(tdAct);
@@ -117,7 +135,8 @@ function collectRoutes(){
   document.querySelectorAll('#route_body tr').forEach(tr=>{
     const srcIf = tr.querySelector('.src-if').value;
     const dstIf = tr.querySelector('.dst-if').value;
-    const route = { source:{ interface: srcIf }, destination:{ interface: dstIf }, active:true };
+    const active = tr.querySelector('.route-toggle').dataset.active === 'true';
+    const route = { source:{ interface: srcIf }, destination:{ interface: dstIf }, active };
     if(srcIf.startsWith('UART')){
       route.source.baudrate = parseInt(tr.querySelector('.src-baudrate').value)||0;
       route.source.parity = tr.querySelector('.src-parity').value;
@@ -157,6 +176,9 @@ function loadRoutes(){
   fetch('/api/config')
     .then(r=>r.json())
     .then(cfg=>{
+      wifiAPEnabled = cfg.wifi?.enabled && (cfg.wifi.mode === 'ap' || cfg.wifi.mode === 'apsta');
+      wifiSTAEnabled = cfg.wifi?.enabled && (cfg.wifi.mode === 'sta' || cfg.wifi.mode === 'apsta');
+      mqttEnabled = cfg.mqtt?.enabled;
       (cfg.routes||[]).forEach(r=>addRow(r));
     })
     .catch(_=>{});
