@@ -86,3 +86,34 @@ void start_mqtt(void) {
 
     global_mqtt_client = client;
 }
+
+void um1_mqtt_publish(const uint8_t *data, int len)
+{
+    if (!data || len <= 0) {
+        return;
+    }
+
+    if (!global_mqtt_config.tx_enabled) {
+        ESP_LOGW(TAG, "MQTT TX disabled by config");
+        return;
+    }
+
+    if (!global_mqtt_client) {
+        ESP_LOGW(TAG, "MQTT client not initialized");
+        return;
+    }
+
+    if (strlen(global_mqtt_config.topic) == 0) {
+        ESP_LOGW(TAG, "MQTT topic not configured");
+        return;
+    }
+
+    int msg_id = esp_mqtt_client_publish(global_mqtt_client,
+                                         global_mqtt_config.topic,
+                                         (const char *)data,
+                                         len,
+                                         1, 0);
+    if (msg_id < 0) {
+        ESP_LOGE(TAG, "Failed to publish MQTT message");
+    }
+}
