@@ -8,6 +8,11 @@
 static esp_netif_t *wifi_ap_netif = NULL;
 static esp_netif_t *wifi_sta_netif = NULL;
 
+int wifi_ap_tcp_server_sock = -1;
+int wifi_ap_tcp_client_sock = -1;
+int wifi_ap_udp_server_sock = -1;
+int wifi_ap_udp_client_sock = -1;
+
 /* ===== AP MODE: TCP Server ===== */
 static void wifi_ap_tcp_server_task(void *pvParameters)
 {
@@ -66,6 +71,112 @@ static void wifi_ap_tcp_server_task(void *pvParameters)
     }
 
     close(listen_sock);
+    vTaskDelete(NULL);
+}
+
+/* ===== AP MODE: TCP Client ===== */
+static void wifi_ap_tcp_client_task(void *pvParameters)
+{
+    struct sockaddr_in dest_addr = {0};
+    dest_addr.sin_family = AF_INET;
+    dest_addr.sin_port = htons(TCP_PORT);
+    dest_addr.sin_addr.s_addr = inet_addr(global_tcp_config.server);
+
+    wifi_ap_tcp_client_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+    if (wifi_ap_tcp_client_sock < 0) {
+        ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
+        vTaskDelete(NULL);
+        return;
+    }
+
+    if (connect(wifi_ap_tcp_client_sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) != 0) {
+        ESP_LOGE(TAG, "Socket unable to connect: errno %d", errno);
+        close(wifi_ap_tcp_client_sock);
+        wifi_ap_tcp_client_sock = -1;
+        vTaskDelete(NULL);
+        return;
+    }
+
+    uint8_t rx_buffer[1024];
+    int len;
+    while ((len = recv(wifi_ap_tcp_client_sock, rx_buffer, sizeof(rx_buffer), 0)) > 0) {
+        route_data("AP", rx_buffer, len);
+    }
+    close(wifi_ap_tcp_client_sock);
+    wifi_ap_tcp_client_sock = -1;
+    vTaskDelete(NULL);
+}
+
+/* ===== AP MODE: UDP Server ===== */
+static void wifi_ap_udp_server_task(void *pvParameters)
+{
+    esp_netif_ip_info_t ip_info;
+    ESP_ERROR_CHECK(esp_netif_get_ip_info(wifi_ap_netif, &ip_info));
+
+    wifi_ap_udp_server_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+    if (wifi_ap_udp_server_sock < 0) {
+        ESP_LOGE(TAG, "Unable to create UDP socket: errno %d", errno);
+        vTaskDelete(NULL);
+        return;
+    }
+
+    struct sockaddr_in server_addr = {
+        .sin_family = AF_INET,
+        .sin_addr.s_addr = ip_info.ip.addr,
+        .sin_port = htons(TCP_PORT),
+    };
+
+    if (bind(wifi_ap_udp_server_sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        ESP_LOGE(TAG, "UDP socket bind failed: errno %d", errno);
+        close(wifi_ap_udp_server_sock);
+        wifi_ap_udp_server_sock = -1;
+        vTaskDelete(NULL);
+        return;
+    }
+
+    uint8_t rx_buffer[1024];
+    struct sockaddr_in source_addr;
+    socklen_t socklen = sizeof(source_addr);
+    int len;
+    while ((len = recvfrom(wifi_ap_udp_server_sock, rx_buffer, sizeof(rx_buffer), 0,
+                           (struct sockaddr *)&source_addr, &socklen)) >= 0) {
+        route_data("AP", rx_buffer, len);
+    }
+    close(wifi_ap_udp_server_sock);
+    wifi_ap_udp_server_sock = -1;
+    vTaskDelete(NULL);
+}
+
+/* ===== AP MODE: UDP Client ===== */
+static void wifi_ap_udp_client_task(void *pvParameters)
+{
+    struct sockaddr_in dest_addr = {0};
+    dest_addr.sin_family = AF_INET;
+    dest_addr.sin_port = htons(TCP_PORT);
+    dest_addr.sin_addr.s_addr = inet_addr(global_udp_config.server);
+
+    wifi_ap_udp_client_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+    if (wifi_ap_udp_client_sock < 0) {
+        ESP_LOGE(TAG, "Unable to create UDP socket: errno %d", errno);
+        vTaskDelete(NULL);
+        return;
+    }
+
+    if (connect(wifi_ap_udp_client_sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) != 0) {
+        ESP_LOGE(TAG, "UDP socket unable to connect: errno %d", errno);
+        close(wifi_ap_udp_client_sock);
+        wifi_ap_udp_client_sock = -1;
+        vTaskDelete(NULL);
+        return;
+    }
+
+    uint8_t rx_buffer[1024];
+    int len;
+    while ((len = recv(wifi_ap_udp_client_sock, rx_buffer, sizeof(rx_buffer), 0)) > 0) {
+        route_data("AP", rx_buffer, len);
+    }
+    close(wifi_ap_udp_client_sock);
+    wifi_ap_udp_client_sock = -1;
     vTaskDelete(NULL);
 }
 
@@ -142,6 +253,9 @@ static void wifi_event_handler_ap(void *arg, esp_event_base_t event_base, int32_
     } else if (event_id == WIFI_EVENT_AP_START) {
         ESP_LOGI(TAG, "AP started");
         xTaskCreate(wifi_ap_tcp_server_task, "tcp_ap", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
+        xTaskCreate(wifi_ap_tcp_client_task, "tcp_ap_client", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
+        xTaskCreate(wifi_ap_udp_server_task, "udp_ap_server", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
+        xTaskCreate(wifi_ap_udp_client_task, "udp_ap_client", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
     }
 }
 

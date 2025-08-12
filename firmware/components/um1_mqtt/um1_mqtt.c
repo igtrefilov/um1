@@ -1,5 +1,6 @@
 #include "um1_mqtt.h"
 #include "um1_uart.h"
+#include "um1_router.h"
 
 static const char *TAG = "um1_mqtt";
 esp_mqtt_client_handle_t global_mqtt_client = NULL;
@@ -41,6 +42,8 @@ void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event
             topic[len] = '\0';
 
             ESP_LOGI(TAG, "MQTT_EVENT_DATA topic=%s", topic);
+
+            route_data("MQTT", (const uint8_t *)event->data, event->data_len);
 
             int uart_port = 0;
             if (sscanf(topic, "uart/%d", &uart_port) == 1) {

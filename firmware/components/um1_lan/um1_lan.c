@@ -20,19 +20,19 @@
 
 static const char *TAG = "eth_if_tasks";
 
-static int tcp_sock = -1;
-static int tcp_listen_sock = -1;
-static int udp_sock = -1;
-static struct sockaddr_in tcp_dest;
-static struct sockaddr_in udp_dest;
+int tcp_sock = -1;
+int tcp_listen_sock = -1;
+int udp_sock = -1;
+struct sockaddr_in tcp_dest;
+struct sockaddr_in udp_dest;
 bool tcp_connected = false;
 bool udp_connected = false;
 
 static void process_stream_buffer(const char *buf, int len);
-static void tcp_client_task(void *arg);
-static void tcp_server_task(void *arg);
-static void udp_client_task(void *arg);
-static void udp_server_task(void *arg);
+static void lan_tcp_client_task(void *arg);
+static void lan_tcp_server_task(void *arg);
+static void lan_udp_client_task(void *arg);
+static void lan_udp_server_task(void *arg);
 
 static void send_text(int sock, const char *fmt, ...) {
     char buf[256];
@@ -112,7 +112,7 @@ void init_stream_sockets(void) {
                 };
                 if (bind(tcp_listen_sock, (struct sockaddr *)&addr, sizeof(addr)) == 0 &&
                     listen(tcp_listen_sock, 1) == 0) {
-                    xTaskCreate(tcp_server_task, "tcp_server_task", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
+                    xTaskCreate(lan_tcp_server_task, "tcp_server_task", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
                 } else {
                     close(tcp_listen_sock);
                     tcp_listen_sock = -1;
@@ -126,7 +126,7 @@ void init_stream_sockets(void) {
                 inet_pton(AF_INET, global_tcp_config.server, &tcp_dest.sin_addr);
                 if (connect(tcp_sock, (struct sockaddr *)&tcp_dest, sizeof(tcp_dest)) == 0) {
                     tcp_connected = true;
-                    xTaskCreate(tcp_client_task, "tcp_client_task", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
+                    xTaskCreate(lan_tcp_client_task, "tcp_client_task", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
                 } else {
                     close(tcp_sock);
                     tcp_sock = -1;
@@ -146,7 +146,7 @@ void init_stream_sockets(void) {
                 };
                 if (bind(udp_sock, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
                     udp_connected = true;
-                    xTaskCreate(udp_server_task, "udp_server_task", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
+                    xTaskCreate(lan_udp_server_task, "udp_server_task", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
                 } else {
                     close(udp_sock);
                     udp_sock = -1;
@@ -157,7 +157,7 @@ void init_stream_sockets(void) {
                 inet_pton(AF_INET, global_udp_config.server, &udp_dest.sin_addr);
                 if (connect(udp_sock, (struct sockaddr *)&udp_dest, sizeof(udp_dest)) == 0) {
                     udp_connected = true;
-                    xTaskCreate(udp_client_task, "udp_client_task", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
+                    xTaskCreate(lan_udp_client_task, "udp_client_task", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
                 } else {
                     close(udp_sock);
                     udp_sock = -1;
@@ -201,7 +201,7 @@ void send_udp_packet(int uart_port, const uint8_t *data, size_t len) {
     }
 }
 
-static void tcp_client_task(void *arg) {
+static void lan_tcp_client_task(void *arg) {
     char buffer[BUF_SIZE];
     while (1) {
         int len = recv(tcp_sock, buffer, sizeof(buffer), 0);
@@ -216,7 +216,7 @@ static void tcp_client_task(void *arg) {
     vTaskDelete(NULL);
 }
 
-static void tcp_server_task(void *arg) {
+static void lan_tcp_server_task(void *arg) {
     char buffer[BUF_SIZE];
     while (1) {
         int client = accept(tcp_listen_sock, NULL, NULL);
@@ -236,7 +236,7 @@ static void tcp_server_task(void *arg) {
     }
 }
 
-static void udp_client_task(void *arg) {
+static void lan_udp_client_task(void *arg) {
     char buffer[BUF_SIZE];
     while (1) {
         int len = recv(udp_sock, buffer, sizeof(buffer), 0);
@@ -251,7 +251,7 @@ static void udp_client_task(void *arg) {
     vTaskDelete(NULL);
 }
 
-static void udp_server_task(void *arg) {
+static void lan_udp_server_task(void *arg) {
     char buffer[BUF_SIZE];
     struct sockaddr_in src_addr;
     socklen_t addrlen = sizeof(src_addr);
