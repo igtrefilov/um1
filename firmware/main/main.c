@@ -26,6 +26,7 @@
 #include "um1_config.h"
 #include "um1_mqtt.h"
 #include "um1_sntp.h"
+#include "um1_router.h"
 
 void init_esp_environment(void)
 {
@@ -46,7 +47,8 @@ void app_main(void)
 
     start_spiffs();
     vTaskDelay(pdMS_TO_TICKS(1000));
-	read_config_and_apply();
+        read_config_and_apply();
+        router_init_from_config();
 
 	start_wifi();
 	vTaskDelay(pdMS_TO_TICKS(1000));
@@ -57,10 +59,10 @@ void app_main(void)
 	start_webserver();
 	vTaskDelay(pdMS_TO_TICKS(1000));
 
-	start_uart();
-	vTaskDelay(pdMS_TO_TICKS(1000));
+        start_uart();
+        vTaskDelay(pdMS_TO_TICKS(1000));
 
-	start_mqtt();
+        start_mqtt();
 	vTaskDelay(pdMS_TO_TICKS(1000));
 
 	start_sntp();
