@@ -22,6 +22,8 @@
 
 void send_tcp_packet(const uint8_t *data, size_t len);
 void send_udp_packet(const uint8_t *data, size_t len);
+bool lan_tcp_connected(void);
+bool lan_udp_connected(void);
 
 void lan_tcp_task(void *arg);
 void lan_udp_task(void *arg);

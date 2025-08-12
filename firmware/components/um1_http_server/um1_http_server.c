@@ -185,8 +185,8 @@ esp_err_t system_info_handler(httpd_req_t *req)
 esp_err_t stream_status_handler(httpd_req_t *req)
 {
     cJSON *root = cJSON_CreateObject();
-    cJSON_AddBoolToObject(root, "tcp", tcp_connected);
-    cJSON_AddBoolToObject(root, "udp", udp_connected);
+    cJSON_AddBoolToObject(root, "tcp", lan_tcp_connected());
+    cJSON_AddBoolToObject(root, "udp", lan_udp_connected());
     char *out = cJSON_PrintUnformatted(root);
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, out);
