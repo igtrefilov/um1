@@ -67,8 +67,10 @@ static void got_ip_event_handler(void *arg, esp_event_base_t event_base,
     }
     *ip_copy = *ip_info;
 
-    init_stream_sockets();
-    xTaskCreate(tcp_lan_server_task, "tcp_lan_server", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
+    xTaskCreate(lan_tcp_task, "lan_tcp_task", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
+    xTaskCreate(lan_udp_task, "lan_tcp_task", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
+
+    xTaskCreate(extern_util_task, "tcp_lan_server", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
 }
 
 void start_lan(void)

@@ -60,7 +60,7 @@ static void wifi_ap_tcp_server_task(void *pvParameters)
         uint8_t rx_buffer[1024];
         int len;
         while ((len = recv(client_sock, rx_buffer, sizeof(rx_buffer), 0)) > 0) {
-            route_data("AP", rx_buffer, len);
+            route_data(/*route*/, rx_buffer, len);
         }
         close(client_sock);
     }
@@ -121,7 +121,7 @@ static void wifi_sta_tcp_server_task(void *pvParameters)
         uint8_t rx_buffer[1024];
         int len;
         while ((len = recv(client_sock, rx_buffer, sizeof(rx_buffer), 0)) > 0) {
-            route_data("STA", rx_buffer, len);
+            route_data(/* route */, rx_buffer, len);
         }
         close(client_sock);
     }

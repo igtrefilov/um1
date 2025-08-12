@@ -7,32 +7,275 @@
 #include <lwip/inet.h>
 #include <strings.h>
 #include <driver/uart.h>
+#include <stdarg.h>
 #include "um1_router.h"
-#define UART_PORT_NUM_1 1
-#define UART_PORT_NUM_2 2
 
-#define TCP_PORT  3333
-#define LISTEN_BACKLOG 5
+#include "freertos/semphr.h"
+
+#define TCP_DATA_PORT    4001
+#define TCP_UTILITY_PORT 3333
+#define LISTEN_BACKLOG   5
 
 #define CMD_BUF_SZ   64
 #define CHUNK_SZ     1024
 
+#define MAX_TCP_CLIENTS 4
 
-static const char *TAG = "eth_if_tasks";
+static const char *TAG = "um1_lan";
 
-static int tcp_sock = -1;
-static int tcp_listen_sock = -1;
-static int udp_sock = -1;
-static struct sockaddr_in tcp_dest;
-static struct sockaddr_in udp_dest;
-bool tcp_connected = false;
-bool udp_connected = false;
+/* ------- shared socket state ------- */
 
-static void process_stream_buffer(const char *buf, int len);
-static void tcp_client_task(void *arg);
-static void tcp_server_task(void *arg);
-static void udp_client_task(void *arg);
-static void udp_server_task(void *arg);
+static int s_tcp_clients[MAX_TCP_CLIENTS];
+static int s_udp_sock = -1;
+static struct sockaddr_in s_udp_peer;
+static bool s_udp_peer_set = false;
+
+static SemaphoreHandle_t s_sock_lock = NULL;
+
+static inline void lock_socks(void)   { if (s_sock_lock) xSemaphoreTake(s_sock_lock, portMAX_DELAY); }
+static inline void unlock_socks(void) { if (s_sock_lock) xSemaphoreGive(s_sock_lock); }
+
+static void sockets_state_init_once(void)
+{
+    static bool inited = false;
+    if (!inited) {
+        s_sock_lock = xSemaphoreCreateMutex();
+        for (int i = 0; i < MAX_TCP_CLIENTS; ++i) s_tcp_clients[i] = -1;
+        s_udp_sock = -1;
+        s_udp_peer_set = false;
+        inited = true;
+    }
+}
+
+static void clients_add(int sock)
+{
+    lock_socks();
+    for (int i = 0; i < MAX_TCP_CLIENTS; ++i) {
+        if (s_tcp_clients[i] == -1) { s_tcp_clients[i] = sock; break; }
+    }
+    unlock_socks();
+}
+
+static void clients_remove(int sock)
+{
+    lock_socks();
+    for (int i = 0; i < MAX_TCP_CLIENTS; ++i) {
+        if (s_tcp_clients[i] == sock) { s_tcp_clients[i] = -1; break; }
+    }
+    unlock_socks();
+}
+
+/* ------- outward API ------- */
+
+void send_tcp_packet(const uint8_t *data, size_t len)
+{
+    if (!data || !len) return;
+
+    lock_socks();
+    for (int i = 0; i < MAX_TCP_CLIENTS; ++i) {
+        int s = s_tcp_clients[i];
+        if (s < 0) continue;
+        int r = send(s, data, len, 0);
+        if (r < 0) {
+            ESP_LOGE(TAG, "send(TCP fd=%d) failed, errno=%d — drop client", s, errno);
+            shutdown(s, SHUT_RDWR);
+            close(s);
+            s_tcp_clients[i] = -1;
+        }
+    }
+    unlock_socks();
+}
+
+void send_udp_packet(const uint8_t *data, size_t len)
+{
+    if (!data || !len) return;
+
+    int sock;
+    bool has_peer;
+    struct sockaddr_in peer;
+
+    lock_socks();
+    sock = s_udp_sock;
+    has_peer = s_udp_peer_set;
+    peer = s_udp_peer;
+    unlock_socks();
+
+    if (sock < 0) {
+        ESP_LOGW(TAG, "UDP socket not ready");
+        return;
+    }
+    if (!has_peer) {
+        ESP_LOGW(TAG, "UDP peer not set yet (no incoming datagrams received)");
+        return;
+    }
+
+    int r = sendto(sock, data, len, 0, (struct sockaddr *)&peer, sizeof(peer));
+    if (r < 0) {
+        ESP_LOGE(TAG, "sendto failed: errno=%d", errno);
+    }
+}
+
+/* ------- TCP data server ------- */
+
+static void handle_lan_tcp_client_task(void *pvParameters)
+{
+    int sock = *((int *)pvParameters);
+    free(pvParameters);
+
+    uint8_t buf[CHUNK_SZ];
+    while (1) {
+        int r = recv(sock, buf, sizeof(buf), 0);
+        if (r > 0) {
+            // route_data(/* route */, buf, r);
+            continue;
+        }
+        if (r == 0) {
+            ESP_LOGI(TAG, "TCP client closed");
+            break;
+        }
+        ESP_LOGE(TAG, "recv error: errno=%d", errno);
+        break;
+    }
+
+    clients_remove(sock);
+    shutdown(sock, SHUT_RDWR);
+    close(sock);
+    vTaskDelete(NULL);
+}
+
+void lan_tcp_task(void *arg)
+{
+    sockets_state_init_once();
+
+    esp_netif_ip_info_t ip_local = *(esp_netif_ip_info_t *)arg;
+
+    int listen_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+    if (listen_sock < 0) {
+        ESP_LOGE(TAG, "lan_tcp: socket() failed: errno=%d", errno);
+        vTaskDelete(NULL);
+        return;
+    }
+
+    int opt = 1;
+    setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+    struct sockaddr_in addr = {
+        .sin_family = AF_INET,
+        .sin_port   = htons(TCP_DATA_PORT),
+        .sin_addr.s_addr = ip_local.ip.addr,
+    };
+
+    if (bind(listen_sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        ESP_LOGE(TAG, "lan_tcp: bind() failed: errno=%d", errno);
+        close(listen_sock);
+        vTaskDelete(NULL);
+        return;
+    }
+
+    if (listen(listen_sock, LISTEN_BACKLOG) < 0) {
+        ESP_LOGE(TAG, "lan_tcp: listen() failed: errno=%d", errno);
+        close(listen_sock);
+        vTaskDelete(NULL);
+        return;
+    }
+
+    ESP_LOGI(TAG, "LAN TCP server listening on %s:%d",
+             inet_ntoa(addr.sin_addr), TCP_DATA_PORT);
+
+    while (1) {
+        struct sockaddr_in client_addr;
+        socklen_t addr_len = sizeof(client_addr);
+        int client_sock = accept(listen_sock, (struct sockaddr *)&client_addr, &addr_len);
+        if (client_sock < 0) {
+            ESP_LOGE(TAG, "lan_tcp: accept() failed: errno=%d", errno);
+            continue;
+        }
+
+        ESP_LOGI(TAG, "LAN TCP client %s:%d connected",
+                 inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+
+        clients_add(client_sock);
+
+        int *pclient = malloc(sizeof(int));
+        if (!pclient) {
+            ESP_LOGE(TAG, "lan_tcp: malloc() failed for client socket");
+            shutdown(client_sock, SHUT_RDWR);
+            close(client_sock);
+            clients_remove(client_sock);
+            continue;
+        }
+        *pclient = client_sock;
+        xTaskCreate(handle_lan_tcp_client_task, "lan_tcp_client", 4096, pclient, 5, NULL);
+    }
+
+    close(listen_sock);
+    vTaskDelete(NULL);
+}
+
+/* ------- UDP data server ------- */
+
+void lan_udp_task(void *arg)
+{
+    sockets_state_init_once();
+
+    esp_netif_ip_info_t ip_local = *(esp_netif_ip_info_t *)arg;
+
+    int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (sock < 0) {
+        ESP_LOGE(TAG, "lan_udp: socket() failed: errno=%d", errno);
+        vTaskDelete(NULL);
+        return;
+    }
+
+    int opt = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+    struct sockaddr_in addr = {
+        .sin_family = AF_INET,
+        .sin_port   = htons(TCP_DATA_PORT),
+        .sin_addr.s_addr = ip_local.ip.addr,
+    };
+
+    if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        ESP_LOGE(TAG, "lan_udp: bind() failed: errno=%d", errno);
+        close(sock);
+        vTaskDelete(NULL);
+        return;
+    }
+
+    lock_socks();
+    s_udp_sock = sock;
+    unlock_socks();
+
+    ESP_LOGI(TAG, "LAN UDP server listening on %s:%d",
+             inet_ntoa(addr.sin_addr), TCP_DATA_PORT);
+
+    uint8_t buf[CHUNK_SZ];
+    struct sockaddr_in from;
+    socklen_t fromlen = sizeof(from);
+
+    while (1) {
+        int r = recvfrom(sock, buf, sizeof(buf), 0,
+                         (struct sockaddr *)&from, &fromlen);
+        if (r < 0) {
+            ESP_LOGE(TAG, "lan_udp: recvfrom() error: errno=%d", errno);
+            continue;
+        }
+
+        lock_socks();
+        s_udp_peer = from;
+        s_udp_peer_set = true;
+        unlock_socks();
+
+        // route_data(/* route */, buf, r);
+
+    }
+
+    close(sock);
+    vTaskDelete(NULL);
+}
+
+/*	EXTERN UTILITY	*/
 
 static void send_text(int sock, const char *fmt, ...) {
     char buf[256];
@@ -91,185 +334,7 @@ static void rmdir_recursive(const char *base_path, int sock) {
     rmdir(base_path);
 }
 
-static void process_stream_buffer(const char *buf, int len) {
-    if (len <= 0) return;
-    if (strncmp(buf, "uart1:", 6) == 0) {
-        uart_write_bytes(UART_PORT_NUM_1, buf + 6, len - 6);
-    } else if (strncmp(buf, "uart2:", 6) == 0) {
-        uart_write_bytes(UART_PORT_NUM_2, buf + 6, len - 6);
-    }
-}
-
-void init_stream_sockets(void) {
-    if (global_tcp_config.enabled) {
-        if (strcmp(global_tcp_config.role, "server") == 0) {
-            tcp_listen_sock = socket(AF_INET, SOCK_STREAM, 0);
-            if (tcp_listen_sock >= 0) {
-                struct sockaddr_in addr = {
-                    .sin_family = AF_INET,
-                    .sin_port = htons(global_tcp_config.port),
-                    .sin_addr.s_addr = htonl(INADDR_ANY)
-                };
-                if (bind(tcp_listen_sock, (struct sockaddr *)&addr, sizeof(addr)) == 0 &&
-                    listen(tcp_listen_sock, 1) == 0) {
-                    xTaskCreate(tcp_server_task, "tcp_server_task", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
-                } else {
-                    close(tcp_listen_sock);
-                    tcp_listen_sock = -1;
-                }
-            }
-        } else {
-            tcp_sock = socket(AF_INET, SOCK_STREAM, 0);
-            if (tcp_sock >= 0) {
-                tcp_dest.sin_family = AF_INET;
-                tcp_dest.sin_port = htons(global_tcp_config.port);
-                inet_pton(AF_INET, global_tcp_config.server, &tcp_dest.sin_addr);
-                if (connect(tcp_sock, (struct sockaddr *)&tcp_dest, sizeof(tcp_dest)) == 0) {
-                    tcp_connected = true;
-                    xTaskCreate(tcp_client_task, "tcp_client_task", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
-                } else {
-                    close(tcp_sock);
-                    tcp_sock = -1;
-                }
-            }
-        }
-    }
-
-    if (global_udp_config.enabled) {
-        udp_sock = socket(AF_INET, SOCK_DGRAM, 0);
-        if (udp_sock >= 0) {
-            if (strcmp(global_udp_config.role, "server") == 0) {
-                struct sockaddr_in addr = {
-                    .sin_family = AF_INET,
-                    .sin_port = htons(global_udp_config.port),
-                    .sin_addr.s_addr = htonl(INADDR_ANY)
-                };
-                if (bind(udp_sock, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
-                    udp_connected = true;
-                    xTaskCreate(udp_server_task, "udp_server_task", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
-                } else {
-                    close(udp_sock);
-                    udp_sock = -1;
-                }
-            } else {
-                udp_dest.sin_family = AF_INET;
-                udp_dest.sin_port = htons(global_udp_config.port);
-                inet_pton(AF_INET, global_udp_config.server, &udp_dest.sin_addr);
-                if (connect(udp_sock, (struct sockaddr *)&udp_dest, sizeof(udp_dest)) == 0) {
-                    udp_connected = true;
-                    xTaskCreate(udp_client_task, "udp_client_task", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
-                } else {
-                    close(udp_sock);
-                    udp_sock = -1;
-                }
-            }
-        }
-    }
-}
-
-void send_tcp_packet(int uart_port, const uint8_t *data, size_t len) {
-    if (!tcp_connected) return;
-
-    char buffer[BUF_SIZE + 16];
-    int offset = 0;
-    if (uart_port >= 0) {
-        offset = snprintf(buffer, sizeof(buffer), "uart%d:", uart_port);
-    }
-    if (offset + len > sizeof(buffer)) len = sizeof(buffer) - offset;
-    memcpy(buffer + offset, data, len);
-    if (send(tcp_sock, buffer, offset + len, 0) < 0) {
-        close(tcp_sock);
-        tcp_sock = -1;
-        tcp_connected = false;
-    }
-}
-
-void send_udp_packet(int uart_port, const uint8_t *data, size_t len) {
-    if (!udp_connected) return;
-
-    char buffer[BUF_SIZE + 16];
-    int offset = 0;
-    if (uart_port >= 0) {
-        offset = snprintf(buffer, sizeof(buffer), "uart%d:", uart_port);
-    }
-    if (offset + len > sizeof(buffer)) len = sizeof(buffer) - offset;
-    memcpy(buffer + offset, data, len);
-    if (send(udp_sock, buffer, offset + len, 0) < 0) {
-        close(udp_sock);
-        udp_sock = -1;
-        udp_connected = false;
-    }
-}
-
-static void tcp_client_task(void *arg) {
-    char buffer[BUF_SIZE];
-    while (1) {
-        int len = recv(tcp_sock, buffer, sizeof(buffer), 0);
-        if (len <= 0) break;
-        route_data("LAN", (uint8_t *)buffer, len);
-        route_data("AP", (uint8_t *)buffer, len);
-        process_stream_buffer(buffer, len);
-    }
-    close(tcp_sock);
-    tcp_sock = -1;
-    tcp_connected = false;
-    vTaskDelete(NULL);
-}
-
-static void tcp_server_task(void *arg) {
-    char buffer[BUF_SIZE];
-    while (1) {
-        int client = accept(tcp_listen_sock, NULL, NULL);
-        if (client < 0) continue;
-        tcp_sock = client;
-        tcp_connected = true;
-        while (1) {
-            int len = recv(client, buffer, sizeof(buffer), 0);
-            if (len <= 0) break;
-            route_data("LAN", (uint8_t *)buffer, len);
-            route_data("AP", (uint8_t *)buffer, len);
-            process_stream_buffer(buffer, len);
-        }
-        close(client);
-        tcp_sock = -1;
-        tcp_connected = false;
-    }
-}
-
-static void udp_client_task(void *arg) {
-    char buffer[BUF_SIZE];
-    while (1) {
-        int len = recv(udp_sock, buffer, sizeof(buffer), 0);
-        if (len <= 0) break;
-        route_data("LAN", (uint8_t *)buffer, len);
-        route_data("AP", (uint8_t *)buffer, len);
-        process_stream_buffer(buffer, len);
-    }
-    close(udp_sock);
-    udp_sock = -1;
-    udp_connected = false;
-    vTaskDelete(NULL);
-}
-
-static void udp_server_task(void *arg) {
-    char buffer[BUF_SIZE];
-    struct sockaddr_in src_addr;
-    socklen_t addrlen = sizeof(src_addr);
-    while (1) {
-        int len = recvfrom(udp_sock, buffer, sizeof(buffer), 0,
-                           (struct sockaddr *)&src_addr, &addrlen);
-        if (len < 0) break;
-        route_data("LAN", (uint8_t *)buffer, len);
-        route_data("AP", (uint8_t *)buffer, len);
-        process_stream_buffer(buffer, len);
-    }
-    close(udp_sock);
-    udp_sock = -1;
-    udp_connected = false;
-    vTaskDelete(NULL);
-}
-
-void handle_client(int client_sock) {
+void handle_util(int client_sock) {
     char cmd[CMD_BUF_SZ];
     int len = recv(client_sock, cmd, sizeof(cmd) - 1, 0);
     if (len <= 0) {
@@ -278,7 +343,6 @@ void handle_client(int client_sock) {
     }
     cmd[len] = '\0';
     ESP_LOGI(TAG, "Received cmd: '%s'", cmd);
-    route_data("LAN", (uint8_t *)cmd, len);
 
     if (strncmp(cmd, "TREE ", 5) == 0) {
         char dir[128];
@@ -343,7 +407,6 @@ void handle_client(int client_sock) {
                 int to_read = rem > CHUNK_SZ ? CHUNK_SZ : rem;
                 int r = recv(client_sock, buf, to_read, 0);
                 if (r <= 0) break;
-                route_data("LAN", buf, r);
                 fwrite(buf, 1, r, f);
                 rem -= r;
             }
@@ -371,7 +434,6 @@ void handle_client(int client_sock) {
                         int r = fread(buf, 1, to_read, f);
                         if (r <= 0) break;
                         send(client_sock, buf, r, 0);
-                        route_data("LAN", buf, r);
                         sent += r;
                     }
                     fclose(f);
@@ -397,17 +459,17 @@ void handle_client(int client_sock) {
     close(client_sock);
 }
 
-void handle_client_task(void *pvParameters) {
+void handle_util_task(void *pvParameters) {
     int client_sock = *((int *)pvParameters);
     free(pvParameters);
 
-    handle_client(client_sock);
+    handle_util(client_sock);
 
     close(client_sock);
     vTaskDelete(NULL);
 }
 
-void tcp_lan_server_task(void *pvParameters) {
+void extern_util_task(void *pvParameters) {
     esp_netif_ip_info_t *ip_info = (esp_netif_ip_info_t *)pvParameters;
     int listen_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     if (listen_sock < 0) {
@@ -420,7 +482,7 @@ void tcp_lan_server_task(void *pvParameters) {
     struct sockaddr_in server_addr = {
         .sin_family = AF_INET,
         .sin_addr.s_addr = ip_info->ip.addr,
-        .sin_port = htons(TCP_PORT),
+        .sin_port = htons(TCP_UTILITY_PORT),
     };
     free(ip_info);
 
@@ -440,7 +502,7 @@ void tcp_lan_server_task(void *pvParameters) {
         return;
     }
 
-    ESP_LOGI(TAG, "TCP server listening on port %d", TCP_PORT);
+    ESP_LOGI(TAG, "TCP server listening on port %d", TCP_UTILITY_PORT);
 
     while (1) {
         struct sockaddr_in client_addr;
@@ -459,59 +521,9 @@ void tcp_lan_server_task(void *pvParameters) {
             continue;
         }
         *pclient = client_sock;
-        xTaskCreate(handle_client_task, "handle_client_task", 4096, pclient, 5, NULL);
+        xTaskCreate(handle_util_task, "handle_client_task", 4096, pclient, 5, NULL);
     }
 
     close(listen_sock);
-    vTaskDelete(NULL);
-}
-
-void udp_lan_server_task(void *pvParameters) {
-    esp_netif_ip_info_t *ip_info = (esp_netif_ip_info_t *)pvParameters;
-    int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
-    if (sock < 0) {
-        ESP_LOGE(TAG, "Unable to create UDP socket: errno %d", errno);
-        free(ip_info);
-        vTaskDelete(NULL);
-        return;
-    }
-
-    struct sockaddr_in server_addr = {
-        .sin_family = AF_INET,
-        .sin_port = htons(TCP_PORT),
-        .sin_addr.s_addr = ip_info->ip.addr,
-    };
-
-    if (bind(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        ESP_LOGE(TAG, "UDP socket bind failed: errno %d", errno);
-        close(sock);
-        free(ip_info);
-        vTaskDelete(NULL);
-        return;
-    }
-
-    ESP_LOGI(TAG, "UDP server listening on port %d", TCP_PORT);
-
-    char rx_buffer[1024];
-    struct sockaddr_in source_addr;
-    socklen_t socklen = sizeof(source_addr);
-
-    while (1) {
-        int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0,
-                           (struct sockaddr *)&source_addr, &socklen);
-        if (len < 0) {
-            ESP_LOGE(TAG, "recvfrom failed: errno %d", errno);
-            break;
-        }
-
-        rx_buffer[len] = 0;
-        ESP_LOGI(TAG, "Received UDP: '%s' from %s:%d", rx_buffer,
-                 inet_ntoa(source_addr.sin_addr), ntohs(source_addr.sin_port));
-
-        sendto(sock, rx_buffer, len, 0,
-               (struct sockaddr *)&source_addr, sizeof(source_addr));
-    }
-
-    close(sock);
     vTaskDelete(NULL);
 }

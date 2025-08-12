@@ -1,0 +1,36 @@
+!SESSION 2025-08-12 10:21:24.921 -----------------------------------------------
+eclipse.buildId=unknown
+java.version=21.0.8
+java.vendor=Ubuntu
+BootLoader constants: OS=linux, ARCH=x86_64, WS=gtk, NL=en_US
+Command-line arguments:  -data /home/ilya/esp/ESP32/projects/work/um1 -os linux -ws gtk -arch x86_64
+
+!ENTRY org.eclipse.launchbar.core 2 0 2025-08-12 10:21:27.403
+!MESSAGE Enablement expression is missing for descriptor type com.espressif.idf.debug.gdbjtag.openocd.descriptorType
+
+!ENTRY org.eclipse.launchbar.core 2 0 2025-08-12 10:21:27.403
+!MESSAGE Enablement expression is missing for config provider for com.espressif.idf.debug.gdbjtag.openocd.descriptorType
+
+!ENTRY org.eclipse.launchbar.core 2 0 2025-08-12 10:21:27.404
+!MESSAGE Enablement expression is missing for config provider for com.espressif.idf.launch.serial.core.idf.descriptorType
+
+!ENTRY org.eclipse.launchbar.core 2 0 2025-08-12 10:21:27.404
+!MESSAGE Enablement expression is missing for descriptor type com.espressif.idf.launch.serial.core.idf.descriptorType
+
+!ENTRY com.espressif.idf.core 1 0 2025-08-12 10:21:27.643
+!MESSAGE Initializing toolchain...
+
+!ENTRY com.espressif.idf.core 1 0 2025-08-12 10:21:27.644
+!MESSAGE idf_tools.py path: null/tools/idf_tools.py
+
+!ENTRY com.espressif.idf.core 1 0 2025-08-12 10:21:27.644
+!MESSAGE idf_tools.py path doesn't exist
+
+!ENTRY com.espressif.idf.core 1 0 2025-08-12 10:21:27.644
+!MESSAGE [/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin]
+
+!ENTRY com.espressif.idf.core 1 0 2025-08-12 10:21:27.710
+!MESSAGE Eclipse Install location::file:/home/ilya/Espressif-IDE/
+
+!ENTRY com.espressif.idf.core 1 0 2025-08-12 10:21:27.711
+!MESSAGE esp-idf.json file doesnt exist at this location: /home/ilya/Espressif-IDE/
