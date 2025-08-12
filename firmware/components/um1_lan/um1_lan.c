@@ -115,6 +115,28 @@ void send_udp_packet(const uint8_t *data, size_t len)
     }
 }
 
+bool lan_tcp_connected(void)
+{
+    bool connected = false;
+    lock_socks();
+    for (int i = 0; i < MAX_TCP_CLIENTS; ++i) {
+        if (s_tcp_clients[i] != -1) {
+            connected = true;
+            break;
+        }
+    }
+    unlock_socks();
+    return connected;
+}
+
+bool lan_udp_connected(void)
+{
+    lock_socks();
+    bool connected = (s_udp_sock != -1) && s_udp_peer_set;
+    unlock_socks();
+    return connected;
+}
+
 /* ------- TCP data server ------- */
 
 static void handle_lan_tcp_client_task(void *pvParameters)
