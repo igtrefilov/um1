@@ -24,6 +24,7 @@
 #include "um1_http_server.h"
 #include "um1_spiffs.h"
 #include "um1_config.h"
+#include "um1_router.h"
 #include "um1_mqtt.h"
 #include "um1_sntp.h"
 
@@ -46,9 +47,10 @@ void app_main(void)
 
     start_spiffs();
     vTaskDelay(pdMS_TO_TICKS(1000));
-	read_config_and_apply();
+        read_config_and_apply();
+        router_init();
 
-	start_wifi();
+        start_wifi();
 	vTaskDelay(pdMS_TO_TICKS(1000));
 
 	start_lan();
