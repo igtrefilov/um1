@@ -17,6 +17,11 @@
 
 #include "um1_config.h"
 
+extern int wifi_ap_tcp_server_sock;
+extern int wifi_ap_tcp_client_sock;
+extern int wifi_ap_udp_server_sock;
+extern int wifi_ap_udp_client_sock;
+
 void start_wifi(void);
 
 #endif // UM1_WIFI_H

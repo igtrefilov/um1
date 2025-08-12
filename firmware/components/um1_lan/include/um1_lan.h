@@ -28,5 +28,8 @@ void send_udp_packet(int uart_port, const uint8_t *data, size_t len);
 
 extern bool tcp_connected;
 extern bool udp_connected;
+extern int tcp_sock;
+extern int udp_sock;
+extern int tcp_listen_sock;
 
 #endif // UM1_LAN_H
