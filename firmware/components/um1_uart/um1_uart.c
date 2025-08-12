@@ -104,9 +104,14 @@ void send_uart_packet_with_timestamp(int uart_port, const uint8_t *data, size_t 
     // WebSocket
     send_uart_ws_data(uart_port, extended_buffer, total_len);
 
-    // Route to other interfaces according to routing table
-    route_data(uart_port == UART_PORT_NUM_1 ? "UART1" : "UART2",
-               extended_buffer, total_len);
+    rx_meta_t m = {
+        .src_id = (uart_port == UART_PORT_NUM_1) ? IF_UART1 : IF_UART2,
+        .proto = PROTO_NONE,
+        .ip = 0,
+        .port = 0,
+        .topic = NULL
+    };
+    router_route(&m, extended_buffer, total_len);
 }
 
 

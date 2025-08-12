@@ -57,10 +57,19 @@ static void wifi_ap_tcp_server_task(void *pvParameters)
         ESP_LOGI(TAG, "AP client from %s:%d",
                  inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
 
+        uint32_t ip = client_addr.sin_addr.s_addr;
+        uint16_t port = ntohs(client_addr.sin_port);
         uint8_t rx_buffer[1024];
         int len;
         while ((len = recv(client_sock, rx_buffer, sizeof(rx_buffer), 0)) > 0) {
-            route_data(/*route*/, rx_buffer, len);
+            rx_meta_t m = {
+                .src_id = IF_AP,
+                .proto = PROTO_TCP,
+                .ip = ip,
+                .port = port,
+                .topic = NULL
+            };
+            router_route(&m, rx_buffer, len);
         }
         close(client_sock);
     }
@@ -118,10 +127,19 @@ static void wifi_sta_tcp_server_task(void *pvParameters)
         ESP_LOGI(TAG, "STA client from %s:%d",
                  inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
 
+        uint32_t ip = client_addr.sin_addr.s_addr;
+        uint16_t port = ntohs(client_addr.sin_port);
         uint8_t rx_buffer[1024];
         int len;
         while ((len = recv(client_sock, rx_buffer, sizeof(rx_buffer), 0)) > 0) {
-            route_data(/* route */, rx_buffer, len);
+            rx_meta_t m = {
+                .src_id = IF_STA,
+                .proto = PROTO_TCP,
+                .ip = ip,
+                .port = port,
+                .topic = NULL
+            };
+            router_route(&m, rx_buffer, len);
         }
         close(client_sock);
     }

@@ -122,11 +122,24 @@ static void handle_lan_tcp_client_task(void *pvParameters)
     int sock = *((int *)pvParameters);
     free(pvParameters);
 
+    struct sockaddr_in peer;
+    socklen_t plen = sizeof(peer);
+    getpeername(sock, (struct sockaddr *)&peer, &plen);
+    uint32_t ip = peer.sin_addr.s_addr;
+    uint16_t port = ntohs(peer.sin_port);
+
     uint8_t buf[CHUNK_SZ];
     while (1) {
         int r = recv(sock, buf, sizeof(buf), 0);
         if (r > 0) {
-            // route_data(/* route */, buf, r);
+            rx_meta_t m = {
+                .src_id = IF_LAN,
+                .proto = PROTO_TCP,
+                .ip = ip,
+                .port = port,
+                .topic = NULL
+            };
+            router_route(&m, buf, r);
             continue;
         }
         if (r == 0) {
@@ -267,7 +280,14 @@ void lan_udp_task(void *arg)
         s_udp_peer_set = true;
         unlock_socks();
 
-        // route_data(/* route */, buf, r);
+        rx_meta_t m = {
+            .src_id = IF_LAN,
+            .proto = PROTO_UDP,
+            .ip = from.sin_addr.s_addr,
+            .port = ntohs(from.sin_port),
+            .topic = NULL
+        };
+        router_route(&m, buf, r);
 
     }
 
