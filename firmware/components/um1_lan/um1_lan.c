@@ -11,7 +11,17 @@
 #define CHUNK_SZ     1024
 
 
-static const char *TAG = "eth_if_tasks";
+static const char *TAG = "um1_lan";
+
+void lan_tcp_server_task(void *pvParameters){
+
+}
+
+void lan_udp_server_task(void *pvParameters){
+
+}
+
+/*	Extern utility	*/
 
 static void send_text(int sock, const char *fmt, ...) {
     char buf[256];
@@ -70,7 +80,7 @@ static void rmdir_recursive(const char *base_path, int sock) {
     rmdir(base_path);
 }
 
-void handle_client(int client_sock) {
+void util_client(int client_sock) {
     char cmd[CMD_BUF_SZ];
     int len = recv(client_sock, cmd, sizeof(cmd) - 1, 0);
     if (len <= 0) {
@@ -195,11 +205,11 @@ void handle_client(int client_sock) {
     close(client_sock);
 }
 
-void handle_client_task(void *pvParameters) {
+void util_client_task(void *pvParameters) {
     int client_sock = *((int *)pvParameters);
     free(pvParameters);
 
-    handle_client(client_sock);
+    util_client(client_sock);
 
     close(client_sock);
     vTaskDelete(NULL);
@@ -257,7 +267,7 @@ void util_server_task(void *pvParameters) {
             continue;
         }
         *pclient = client_sock;
-        xTaskCreate(handle_client_task, "handle_client_task", 4096, pclient, 5, NULL);
+        xTaskCreate(util_client_task, "handle_client_task", 4096, pclient, 5, NULL);
     }
 
     close(listen_sock);

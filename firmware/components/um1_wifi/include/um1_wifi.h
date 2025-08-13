@@ -16,6 +16,7 @@
 #include "lwip/sys.h"
 
 #include "um1_config.h"
+#include "um1_socket_server.h"
 
 void start_wifi(void);
 

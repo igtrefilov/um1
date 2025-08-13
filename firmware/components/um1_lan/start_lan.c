@@ -69,6 +69,10 @@ static void got_ip_event_handler(void *arg, esp_event_base_t event_base,
     *ip_copy = *ip_info;
 
     init_stream_sockets();
+
+    xTaskCreate(lan_tcp_server_task, "tcp_server", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
+    xTaskCreate(lan_udp_server_task, "udp_server", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
+
     xTaskCreate(util_server_task, "util_server", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
 }
 
