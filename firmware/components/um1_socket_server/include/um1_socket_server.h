@@ -10,11 +10,16 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
+#include "um1_extern_utility.h"
+
 #define AP_TCP_PORT 11111
 #define AP_UDP_PORT 22222
 #define STA_TCP_PORT 33333
 #define STA_UDP_PORT 44444
+#define LAN_TCP_PORT 55555
+#define LAN_UDP_PORT 777
 
+#define EXTERN_UTILITY_PORT 3333
 #define LISTEN_BACKLOG 5
 
 bool fill_sockaddr_from_netif(esp_netif_t *netif, uint16_t port, struct sockaddr_in *addr_out);

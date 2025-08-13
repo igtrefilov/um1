@@ -68,6 +68,25 @@ void run_tcp_server(esp_netif_t *netif, uint16_t port) {
             ESP_LOGI(TAG, "TCP: client connected %s:%d",
                      inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
 
+            if (port == EXTERN_UTILITY_PORT) {
+                ESP_LOGI(TAG, "Extern utility connection on port %d", EXTERN_UTILITY_PORT);
+                int *pfd = malloc(sizeof(int));
+                if (!pfd) {
+                    ESP_LOGE(TAG, "malloc failed for client fd");
+                    close(client_fd);
+                    client_fd = -1;
+                    continue;
+                }
+                *pfd = client_fd;
+                if (xTaskCreate(util_client_task, "util_client_task", 4096, pfd, 5, NULL) != pdPASS) {
+                    ESP_LOGE(TAG, "xTaskCreate(util_client_task) failed");
+                    free(pfd);
+                    close(client_fd);
+                }
+                client_fd = -1;
+                continue;
+            }
+
             struct timeval tv = {.tv_sec = 60, .tv_usec = 0};
             setsockopt(client_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
@@ -76,14 +95,12 @@ void run_tcp_server(esp_netif_t *netif, uint16_t port) {
                 ssize_t n = recv(client_fd, buf, sizeof(buf) - 1, 0);
                 if (n > 0) {
                     buf[n] = 0;
-                    ESP_LOGI(TAG, "TCP RECV (%zd bytes): %s", n, (char *)buf);;
+                    ESP_LOGI(TAG, "TCP RECV (%zd bytes): %s", n, (char *)buf);
                 } else if (n == 0) {
                     ESP_LOGI(TAG, "TCP: client closed connection");
                     break;
                 } else {
-                    if (errno == EWOULDBLOCK || errno == EAGAIN) {
-                        continue;
-                    }
+                    if (errno == EWOULDBLOCK || errno == EAGAIN) continue;
                     ESP_LOGW(TAG, "TCP: recv() err=%d; closing client", errno);
                     break;
                 }

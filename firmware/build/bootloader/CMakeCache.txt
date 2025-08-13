@@ -251,7 +251,7 @@ IGNORE_EXTRA_COMPONENT:UNINITIALIZED=
 PROJECT_SOURCE_DIR:UNINITIALIZED=/home/ilya/esp/ESP32/projects/work/um1/firmware
 
 //No help, variable specified on the command line.
-PYTHON:UNINITIALIZED=python
+PYTHON:UNINITIALIZED=/root/.espressif/python_env/idf5.2_py3.12_env/bin/python
 
 //No help, variable specified on the command line.
 PYTHON_DEPS_CHECKED:UNINITIALIZED=1

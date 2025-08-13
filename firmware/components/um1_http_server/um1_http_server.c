@@ -183,6 +183,8 @@ esp_err_t system_info_handler(httpd_req_t *req)
 
 esp_err_t stream_status_handler(httpd_req_t *req)
 {
+	bool tcp_connected = 0; //temporary stub
+	bool udp_connected = 0; //temporary stub
     cJSON *root = cJSON_CreateObject();
     cJSON_AddBoolToObject(root, "tcp", tcp_connected);
     cJSON_AddBoolToObject(root, "udp", udp_connected);
@@ -664,4 +666,16 @@ httpd_handle_t start_webserver(void)
 
     ESP_LOGI(TAG, "Error starting server!");
     return NULL;
+}
+
+uint64_t reverse_bytes_u64(uint64_t value)
+{
+    return ((value & 0x00000000000000FFULL) << 56) |
+           ((value & 0x000000000000FF00ULL) << 40) |
+           ((value & 0x0000000000FF0000ULL) << 24) |
+           ((value & 0x00000000FF000000ULL) << 8)  |
+           ((value & 0x000000FF00000000ULL) >> 8)  |
+           ((value & 0x0000FF0000000000ULL) >> 24) |
+           ((value & 0x00FF000000000000ULL) >> 40) |
+           ((value & 0xFF00000000000000ULL) >> 56);
 }

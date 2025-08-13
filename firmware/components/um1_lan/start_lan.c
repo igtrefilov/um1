@@ -1,21 +1,4 @@
-#include <stdio.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_netif.h"
-#include "esp_eth.h"
-#include "esp_event.h"
-#include "esp_log.h"
-#include "ethernet_init.h"
-#include "sdkconfig.h"
-
 #include "start_lan.h"
-#include "um1_lan.h"
-#include "um1_config.h"
-#include "um1_uart.h"
 
 static const char *TAG = "eth_if";
 
@@ -61,19 +44,10 @@ static void got_ip_event_handler(void *arg, esp_event_base_t event_base,
     ESP_LOGI(TAG, "ETHGW:" IPSTR, IP2STR(&ip_info->gw));
     ESP_LOGI(TAG, "~~~~~~~~~~~");
 
-    esp_netif_ip_info_t *ip_copy = malloc(sizeof(esp_netif_ip_info_t));
-    if (ip_copy == NULL) {
-        ESP_LOGE(TAG, "Failed to allocate memory for IP info");
-        return;
-    }
-    *ip_copy = *ip_info;
+    esp_netif_t *netif = event->esp_netif;
 
-    init_stream_sockets();
-
-    xTaskCreate(lan_tcp_server_task, "tcp_server", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
-    xTaskCreate(lan_udp_server_task, "udp_server", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
-
-    xTaskCreate(util_server_task, "util_server", 4096, ip_copy, tskIDLE_PRIORITY + 5, NULL);
+    xTaskCreate(lan_tcp_server_task, "lan_tcp_master", 4096, netif, tskIDLE_PRIORITY + 5, NULL);
+    xTaskCreate(lan_udp_server_task, "lan_udp_server", 4096, netif, tskIDLE_PRIORITY + 5, NULL);
 }
 
 void start_lan(void)

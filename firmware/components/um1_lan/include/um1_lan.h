@@ -17,9 +17,9 @@
 
 #include "start_lan.h"
 #include "um1_spiffs.h"
+#include "um1_socket_server.h"
 
 void lan_tcp_server_task(void *pvParameters);
 void lan_udp_server_task(void *pvParameters);
-void util_server_task(void *pvParameters);
 
 #endif // UM1_LAN_H
