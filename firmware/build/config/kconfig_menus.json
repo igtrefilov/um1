@@ -21274,7 +21274,7 @@
                         "name": "LWIP_MAX_SOCKETS",
                         "range": [
                             1,
-                            16
+                            32
                         ],
                         "title": "Max number of open sockets",
                         "type": "int"

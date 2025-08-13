@@ -18,6 +18,6 @@
 #include "um1_config.h"
 #include "um1_socket_server.h"
 
-void start_wifi(void);
+esp_err_t start_wifi(void);
 
 #endif // UM1_WIFI_H
