@@ -152,26 +152,60 @@ document.addEventListener('DOMContentLoaded', () => {
     .then(r=>r.json())
     .then(data=>{
       cfg=data;
+
+      const intfIds=['gw_uart1_intf','gw_uart2_intf','mon_uart1_intf','mon_uart2_intf'];
+      const profIds=['gw_uart1_profile','gw_uart2_profile','mon_uart1_profile','mon_uart2_profile'];
+
+      const setValue=(id,val)=>{
+        const el=document.getElementById(id);
+        el.value=val;
+        if(el.value!==val) el.selectedIndex=0;
+        return el;
+      };
+
+      // remove unavailable interfaces based on Wi‑Fi settings
+      if(!cfg.wifi || !cfg.wifi.enabled){
+        intfIds.forEach(id=>{
+          const sel=document.getElementById(id);
+          ['ap','sta'].forEach(v=>sel.querySelector(`option[value="${v}"]`)?.remove());
+        });
+      }else{
+        if(cfg.wifi.mode!=='ap' && cfg.wifi.mode!=='apsta'){
+          intfIds.forEach(id=>document.getElementById(id).querySelector('option[value="ap"]')?.remove());
+        }
+        if(cfg.wifi.mode!=='sta' && cfg.wifi.mode!=='apsta'){
+          intfIds.forEach(id=>document.getElementById(id).querySelector('option[value="sta"]')?.remove());
+        }
+      }
+
+      // remove MQTT profiles if MQTT disabled
+      if(!cfg.mqtt || !cfg.mqtt.enabled){
+        profIds.forEach(id=>{
+          const sel=document.getElementById(id);
+          ['mqtt1','mqtt2'].forEach(v=>sel.querySelector(`option[value="${v}"]`)?.remove());
+        });
+      }
+
       if(cfg.routing){
         const r=cfg.routing;
         if(r.gateway){
           if(r.gateway.uart1){
-            document.getElementById('gw_uart1_intf').value=r.gateway.uart1.intf;
-            document.getElementById('gw_uart1_profile').value=r.gateway.uart1.profile||'ip1';
+            setValue('gw_uart1_intf',r.gateway.uart1.intf);
+            setValue('gw_uart1_profile',r.gateway.uart1.profile||'ip1');
           }
           if(r.gateway.uart2){
-            document.getElementById('gw_uart2_intf').value=r.gateway.uart2.intf;
-            document.getElementById('gw_uart2_profile').value=r.gateway.uart2.profile||'ip1';
+            setValue('gw_uart2_intf',r.gateway.uart2.intf);
+            setValue('gw_uart2_profile',r.gateway.uart2.profile||'ip1');
           }
         }
         if(r.monitor){
           if(r.monitor.uart1){
-            document.getElementById('mon_uart1_intf').value=r.monitor.uart1.intf;
-            document.getElementById('mon_uart1_profile').value=r.monitor.uart1.profile||'ip1';
+            setValue('mon_uart1_intf',r.monitor.uart1.intf);
+            setValue('mon_uart1_profile',r.monitor.uart1.profile||'ip1');
           }
           if(r.monitor.uart2){
-            document.getElementById('mon_uart2_intf').value=r.monitor.uart2.intf;
-            document.getElementById('mon_uart2_profile').value=r.monitor.uart2.profile||'ip1';
+            setValue('mon_uart2_intf',r.monitor.uart2.intf);
+            setValue('mon_uart2_profile',r.monitor.uart2.profile||'ip1');
           }
         }
       }
