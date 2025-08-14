@@ -87,7 +87,31 @@ function collectSettings(){
     mqtt:{ enabled:document.getElementById('mqtt_enabled').checked, broker:document.getElementById('mqtt_broker').value, username:document.getElementById('mqtt_username').value, password:document.getElementById('mqtt_password').value },
     tcp:{ enabled:document.getElementById('tcp_enabled').checked, server:document.getElementById('tcp_server').value, port:+document.getElementById('tcp_port').value },
     udp:{ enabled:document.getElementById('udp_enabled').checked, server:document.getElementById('udp_server').value, port:+document.getElementById('udp_port').value },
-    sntp:{ enabled:document.getElementById('sntp_enabled').checked, server_ip:document.getElementById('sntp_server_ip').value, sync_interval_sec:+document.getElementById('sntp_interval').value }
+    sntp:{ enabled:document.getElementById('sntp_enabled').checked, server_ip:document.getElementById('sntp_server_ip').value, sync_interval_sec:+document.getElementById('sntp_interval').value },
+    ip_profile:{
+      ip1:{
+        client:document.getElementById('ip1_client').checked,
+        address:document.getElementById('ip1_address').value,
+        port:+document.getElementById('ip1_port').value,
+        transport:document.getElementById('ip1_transport').value
+      },
+      ip2:{
+        client:document.getElementById('ip2_client').checked,
+        address:document.getElementById('ip2_address').value,
+        port:+document.getElementById('ip2_port').value,
+        transport:document.getElementById('ip2_transport').value
+      }
+    },
+    mqtt_profile:{
+      mqtt1:{
+        tx_topic:document.getElementById('mqtt1_pub_topic').value,
+        rx_topic:document.getElementById('mqtt1_sub_topic').value
+      },
+      mqtt2:{
+        tx_topic:document.getElementById('mqtt2_pub_topic').value,
+        rx_topic:document.getElementById('mqtt2_sub_topic').value
+      }
+    }
   };
   fetch('/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(settings)})
     .then(r=>{ if(r.ok) showNotification('✅ Настройки успешно сохранены'); else showNotification('❌ Ошибка сохранения',true); })
@@ -137,6 +161,19 @@ async function loadConfigFromServer(){
     document.getElementById('sntp_enabled').checked=config.sntp.enabled;
     document.getElementById('sntp_server_ip').value=config.sntp.server_ip;
     document.getElementById('sntp_interval').value=config.sntp.sync_interval_sec;
+
+    document.getElementById('ip1_client').checked=config.ip_profile.ip1.client;
+    document.getElementById('ip1_address').value=config.ip_profile.ip1.address;
+    document.getElementById('ip1_port').value=config.ip_profile.ip1.port;
+    document.getElementById('ip1_transport').value=config.ip_profile.ip1.transport;
+    document.getElementById('ip2_client').checked=config.ip_profile.ip2.client;
+    document.getElementById('ip2_address').value=config.ip_profile.ip2.address;
+    document.getElementById('ip2_port').value=config.ip_profile.ip2.port;
+    document.getElementById('ip2_transport').value=config.ip_profile.ip2.transport;
+    document.getElementById('mqtt1_pub_topic').value=config.mqtt_profile.mqtt1.tx_topic;
+    document.getElementById('mqtt1_sub_topic').value=config.mqtt_profile.mqtt1.rx_topic;
+    document.getElementById('mqtt2_pub_topic').value=config.mqtt_profile.mqtt2.tx_topic;
+    document.getElementById('mqtt2_sub_topic').value=config.mqtt_profile.mqtt2.rx_topic;
 
     toggleLanFields();
     toggleWifiFields();

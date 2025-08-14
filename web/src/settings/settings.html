@@ -124,6 +124,36 @@
       </div>
       <button id="change_creds_btn">Изменить</button>
     </div>
+    <div class="card">
+      <h3>IP профиль</h3>
+      <h4>Подключение по IP 1 (IP_1):</h4>
+      <table class="settings-table">
+        <tr><td>Клиент:</td><td><input type="checkbox" id="ip1_client" /></td></tr>
+        <tr><td>Адрес IP:</td><td><input type="text" id="ip1_address" /></td></tr>
+        <tr><td>Порт:</td><td><input type="number" id="ip1_port" /></td></tr>
+        <tr><td>Транспортный протокол:</td><td><select id="ip1_transport"><option value="TCP">TCP</option><option value="UDP">UDP</option></select></td></tr>
+      </table>
+      <h4>Подключение по IP 2 (IP_2):</h4>
+      <table class="settings-table">
+        <tr><td>Клиент:</td><td><input type="checkbox" id="ip2_client" /></td></tr>
+        <tr><td>Адрес IP:</td><td><input type="text" id="ip2_address" /></td></tr>
+        <tr><td>Порт:</td><td><input type="number" id="ip2_port" /></td></tr>
+        <tr><td>Транспортный протокол:</td><td><select id="ip2_transport"><option value="TCP">TCP</option><option value="UDP">UDP</option></select></td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>MQTT профиль</h3>
+      <h4>Подключение к MQTT топику 1 (MQTT_1):</h4>
+      <table class="settings-table">
+        <tr><td>Топик для отправки данных (публикация):</td><td><input type="text" id="mqtt1_pub_topic" /></td></tr>
+        <tr><td>Топик для приема данных (подписка):</td><td><input type="text" id="mqtt1_sub_topic" /></td></tr>
+      </table>
+      <h4>Подключение к MQTT топику 2 (MQTT_2):</h4>
+      <table class="settings-table">
+        <tr><td>Топик для отправки данных (публикация):</td><td><input type="text" id="mqtt2_pub_topic" /></td></tr>
+        <tr><td>Топик для приема данных (подписка):</td><td><input type="text" id="mqtt2_sub_topic" /></td></tr>
+      </table>
+    </div>
     <button onclick="collectSettings()">Сохранить настройки</button>
     <pre id="json_output"></pre>
   </div>
