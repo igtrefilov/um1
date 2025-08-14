@@ -173,8 +173,13 @@ body.fullscreen-center {
 
 .infographic {
   margin-top: 1rem;
-  background: #2b2b2b;
-  padding: 8px;
+  padding: 12px 16px;
+  background: linear-gradient(145deg, #232323, #1a1a1a);
+  border: 1px solid #333;
   border-radius: var(--radius);
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  line-height: 1.4;
   white-space: pre-wrap;
+  overflow-x: auto;
 }
