@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (resp.ok) {
         notify('✅ Вход выполнен', 'success');
-        setTimeout(() => location.href = '/index.html', 800);
+        setTimeout(() => location.href = '/gateway/gateway.html', 800);
       } else {
         notify('❌ Неверный логин или пароль', 'error');
       }

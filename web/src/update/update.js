@@ -85,7 +85,7 @@ async function waitAndReload() {
   if (up) {
     setRebootProgress(100, 'Готово! Перезагружаем страницу…');
     setTimeout(() => {
-      location.replace(`${location.origin}/index.html`);
+      location.replace(`${location.origin}/gateway/gateway.html`);
     }, 800);
   } else {
     setRebootProgress(100, '⏱ Не дождались. Обновите страницу вручную.');
