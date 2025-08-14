@@ -15,9 +15,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function fmtIp(intf, profile) {
     const p = cfg.ip_profile[profile];
-    const ip = intf === 'lan' ? cfg.lan.static_ip : intf === 'ap' ? cfg.wifi.ap.static_ip : cfg.wifi.sta.static_ip;
     const role = p.client ? 'Client' : 'Server';
-    return `${intf.toUpperCase()} [${ip}][${role}][${p.address}][${p.port}][${p.transport}]`;
+    const serverIp = p.client
+      ? p.address
+      : intf === 'lan'
+      ? cfg.lan.static_ip
+      : intf === 'ap'
+      ? cfg.wifi.ap.static_ip
+      : cfg.wifi.sta.static_ip;
+    return `${intf.toUpperCase()} [${role}][${serverIp}][${p.port}][${p.transport}]`;
   }
 
   function fmtMqtt(intf, profile) {
@@ -43,10 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const gw2p = document.getElementById('gw_uart2_profile').value;
     const mon2 = document.getElementById('mon_uart2_intf').value;
     const mon2p = document.getElementById('mon_uart2_profile').value;
-
-    const line1 = `${fmtUart('uart1')} <-> ${fmtIntf(gw1, gw1 === 'uart2' ? null : gw1p)} (Шлюз) дублируются на ${fmtIntf(mon1, mon1 === 'uart1' || mon1 === 'uart2' ? null : mon1p)} (Монитор)`;
-    const line2 = `${fmtUart('uart2')} <-> ${fmtIntf(gw2, gw2 === 'uart1' ? null : gw2p)} (Шлюз) дублируются на ${fmtIntf(mon2, mon2 === 'uart1' || mon2 === 'uart2' ? null : mon2p)} (Монитор)`;
-
+    const line1 = `Gate: ${fmtUart('uart1')} <-> ${fmtIntf(gw1, gw1 === 'uart2' ? null : gw1p)}\t\tMonitor: ${fmtIntf(mon1, mon1 === 'uart1' || mon1 === 'uart2' ? null : mon1p)}`;
+    const line2 = `Gate: ${fmtUart('uart2')} <-> ${fmtIntf(gw2, gw2 === 'uart1' ? null : gw2p)}\t\tMonitor: ${fmtIntf(mon2, mon2 === 'uart1' || mon2 === 'uart2' ? null : mon2p)}`;
     document.getElementById('route_info').textContent = `${line1}\n${line2}`;
   }
 
