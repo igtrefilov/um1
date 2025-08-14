@@ -20,7 +20,85 @@
   </header>
   <div class="container">
     <div id="notif" class="notification"></div>
-    <!-- Раздел "Шлюз и мониторинг" пока пуст -->
+    <div class="card">
+      <table class="settings-table">
+        <tr>
+          <th>Интерфейс полевой шины</th>
+          <th colspan="2">Интерфейс шлюзования</th>
+          <th colspan="2">Интерфейс мониторинга</th>
+        </tr>
+        <tr>
+          <td>UART1</td>
+          <td>
+            <select id="gw_uart1_intf">
+              <option value="uart2">UART2</option>
+              <option value="lan">LAN</option>
+              <option value="ap">AP</option>
+              <option value="sta">STA</option>
+            </select>
+          </td>
+          <td>
+            <select id="gw_uart1_profile" disabled>
+              <option value="ip1">IP_1</option>
+              <option value="ip2">IP_2</option>
+              <option value="mqtt1">MQTT_1</option>
+              <option value="mqtt2">MQTT_2</option>
+            </select>
+          </td>
+          <td>
+            <select id="mon_uart1_intf">
+              <option value="uart2">UART2</option>
+              <option value="lan">LAN</option>
+              <option value="ap">AP</option>
+              <option value="sta">STA</option>
+            </select>
+          </td>
+          <td>
+            <select id="mon_uart1_profile" disabled>
+              <option value="ip1">IP_1</option>
+              <option value="ip2">IP_2</option>
+              <option value="mqtt1">MQTT_1</option>
+              <option value="mqtt2">MQTT_2</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td>UART2</td>
+          <td>
+            <select id="gw_uart2_intf">
+              <option value="uart1">UART1</option>
+              <option value="lan">LAN</option>
+              <option value="ap">AP</option>
+              <option value="sta">STA</option>
+            </select>
+          </td>
+          <td>
+            <select id="gw_uart2_profile" disabled>
+              <option value="ip1">IP_1</option>
+              <option value="ip2">IP_2</option>
+              <option value="mqtt1">MQTT_1</option>
+              <option value="mqtt2">MQTT_2</option>
+            </select>
+          </td>
+          <td>
+            <select id="mon_uart2_intf">
+              <option value="uart2">UART2</option>
+              <option value="lan">LAN</option>
+              <option value="ap">AP</option>
+              <option value="sta">STA</option>
+            </select>
+          </td>
+          <td>
+            <select id="mon_uart2_profile" disabled>
+              <option value="ip1">IP_1</option>
+              <option value="ip2">IP_2</option>
+              <option value="mqtt1">MQTT_1</option>
+              <option value="mqtt2">MQTT_2</option>
+            </select>
+          </td>
+        </tr>
+      </table>
+    </div>
   </div>
   <script src="/app.js"></script>
   <script src="/gateway/gateway.js"></script>
