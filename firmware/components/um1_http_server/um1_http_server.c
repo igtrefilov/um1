@@ -277,11 +277,8 @@ esp_err_t config_save_handler(httpd_req_t *req)
 
     cJSON *item = NULL;
     cJSON_ArrayForEach(item, incoming) {
-    	cJSON *item = NULL;
-    	cJSON_ArrayForEach(item, incoming) {
-    	    cJSON_DeleteItemFromObject(root, item->string);
-    	    cJSON_AddItemToObject(root, item->string, cJSON_Duplicate(item, 1));
-    	}
+        cJSON_DeleteItemFromObject(root, item->string);
+        cJSON_AddItemToObject(root, item->string, cJSON_Duplicate(item, 1));
     }
 
     char *out = cJSON_Print(root);

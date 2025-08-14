@@ -102,6 +102,18 @@
       </table>
       <pre id="route_info" class="infographic" aria-label="Инфографика маршрутизации" tabindex="0"></pre>
     </div>
+    <div class="btn-row" style="margin-top:16px;">
+      <button id="save_routes_btn">Сохранить</button>
+      <div class="spacer"></div>
+      <button onclick="sendReboot()">Перезагрузить МК</button>
+    </div>
+  </div>
+  <div id="reboot_overlay" class="overlay">
+    <div class="overlay-card">
+      <h3>Перезагрузка устройства…</h3>
+      <progress id="rb_progress" max="100" value="0"></progress>
+      <div id="rb_status" style="margin-top:8px">Ожидаем повторного подключения…</div>
+    </div>
   </div>
   <script src="/app.js"></script>
   <script src="/gateway/gateway.js"></script>

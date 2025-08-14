@@ -8,6 +8,9 @@ mqtt_config_t global_mqtt_config;
 stream_config_t global_tcp_config;
 stream_config_t global_udp_config;
 sntp_config_t global_sntp_config;
+ip_profile_t global_ip_profiles[2];
+mqtt_profile_t global_mqtt_profiles[2];
+routing_config_t global_routing_config;
 
 void read_config_and_apply(void)
 {
@@ -150,17 +153,83 @@ void read_config_and_apply(void)
                 strcpy(global_udp_config.role, "client");
             }
         }
-	cJSON *sntp = cJSON_GetObjectItem(root, "sntp");
-	if (sntp) {
-	    global_sntp_config.enabled = cJSON_GetObjectItem(sntp, "enabled")->valueint;
-	    strcpy(global_sntp_config.server_ip, cJSON_GetObjectItem(sntp, "server_ip")->valuestring);
-	    global_sntp_config.sync_interval_sec = cJSON_GetObjectItem(sntp, "sync_interval_sec")->valueint;
+        cJSON *sntp = cJSON_GetObjectItem(root, "sntp");
+        if (sntp) {
+            global_sntp_config.enabled = cJSON_GetObjectItem(sntp, "enabled")->valueint;
+            strcpy(global_sntp_config.server_ip, cJSON_GetObjectItem(sntp, "server_ip")->valuestring);
+            global_sntp_config.sync_interval_sec = cJSON_GetObjectItem(sntp, "sync_interval_sec")->valueint;
 
-	    ESP_LOGI("CONFIG", "SNTP: enabled=%d, server_ip=%s, interval=%d",
-	             global_sntp_config.enabled,
-	             global_sntp_config.server_ip,
-	             global_sntp_config.sync_interval_sec);
-	}
+            ESP_LOGI("CONFIG", "SNTP: enabled=%d, server_ip=%s, interval=%d",
+                     global_sntp_config.enabled,
+                     global_sntp_config.server_ip,
+                     global_sntp_config.sync_interval_sec);
+        }
+
+    cJSON *ip_prof = cJSON_GetObjectItem(root, "ip_profile");
+    if (ip_prof) {
+        cJSON *ip1 = cJSON_GetObjectItem(ip_prof, "ip1");
+        if (ip1) {
+            global_ip_profiles[0].client = cJSON_GetObjectItem(ip1, "client")->valueint;
+            strcpy(global_ip_profiles[0].address, cJSON_GetObjectItem(ip1, "address")->valuestring);
+            global_ip_profiles[0].port = cJSON_GetObjectItem(ip1, "port")->valueint;
+            strcpy(global_ip_profiles[0].transport, cJSON_GetObjectItem(ip1, "transport")->valuestring);
+        }
+        cJSON *ip2 = cJSON_GetObjectItem(ip_prof, "ip2");
+        if (ip2) {
+            global_ip_profiles[1].client = cJSON_GetObjectItem(ip2, "client")->valueint;
+            strcpy(global_ip_profiles[1].address, cJSON_GetObjectItem(ip2, "address")->valuestring);
+            global_ip_profiles[1].port = cJSON_GetObjectItem(ip2, "port")->valueint;
+            strcpy(global_ip_profiles[1].transport, cJSON_GetObjectItem(ip2, "transport")->valuestring);
+        }
+    }
+
+    cJSON *mqtt_prof = cJSON_GetObjectItem(root, "mqtt_profile");
+    if (mqtt_prof) {
+        cJSON *mq1 = cJSON_GetObjectItem(mqtt_prof, "mqtt1");
+        if (mq1) {
+            strcpy(global_mqtt_profiles[0].tx_topic, cJSON_GetObjectItem(mq1, "tx_topic")->valuestring);
+            strcpy(global_mqtt_profiles[0].rx_topic, cJSON_GetObjectItem(mq1, "rx_topic")->valuestring);
+        }
+        cJSON *mq2 = cJSON_GetObjectItem(mqtt_prof, "mqtt2");
+        if (mq2) {
+            strcpy(global_mqtt_profiles[1].tx_topic, cJSON_GetObjectItem(mq2, "tx_topic")->valuestring);
+            strcpy(global_mqtt_profiles[1].rx_topic, cJSON_GetObjectItem(mq2, "rx_topic")->valuestring);
+        }
+    }
+
+    cJSON *routing = cJSON_GetObjectItem(root, "routing");
+    if (routing) {
+        cJSON *gw = cJSON_GetObjectItem(routing, "gateway");
+        if (gw) {
+            cJSON *u1 = cJSON_GetObjectItem(gw, "uart1");
+            if (u1) {
+                strcpy(global_routing_config.gateway[0].intf, cJSON_GetObjectItem(u1, "intf")->valuestring);
+                cJSON *p = cJSON_GetObjectItem(u1, "profile");
+                strcpy(global_routing_config.gateway[0].profile, p ? p->valuestring : "");
+            }
+            cJSON *u2 = cJSON_GetObjectItem(gw, "uart2");
+            if (u2) {
+                strcpy(global_routing_config.gateway[1].intf, cJSON_GetObjectItem(u2, "intf")->valuestring);
+                cJSON *p = cJSON_GetObjectItem(u2, "profile");
+                strcpy(global_routing_config.gateway[1].profile, p ? p->valuestring : "");
+            }
+        }
+        cJSON *mon = cJSON_GetObjectItem(routing, "monitor");
+        if (mon) {
+            cJSON *u1 = cJSON_GetObjectItem(mon, "uart1");
+            if (u1) {
+                strcpy(global_routing_config.monitor[0].intf, cJSON_GetObjectItem(u1, "intf")->valuestring);
+                cJSON *p = cJSON_GetObjectItem(u1, "profile");
+                strcpy(global_routing_config.monitor[0].profile, p ? p->valuestring : "");
+            }
+            cJSON *u2 = cJSON_GetObjectItem(mon, "uart2");
+            if (u2) {
+                strcpy(global_routing_config.monitor[1].intf, cJSON_GetObjectItem(u2, "intf")->valuestring);
+                cJSON *p = cJSON_GetObjectItem(u2, "profile");
+                strcpy(global_routing_config.monitor[1].profile, p ? p->valuestring : "");
+            }
+        }
+    }
 
     cJSON_Delete(root);
     free(data);
