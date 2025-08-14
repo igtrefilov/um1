@@ -457,6 +457,13 @@ esp_err_t spiffs_get_handler(httpd_req_t *req)
         strlcat(path, "index.html", sizeof(path));
     } else {
         strlcat(path, req->uri, sizeof(path));
+        if (!strchr(req->uri, '.')) {
+            const char *basename = strrchr(req->uri, '/');
+            basename = basename ? basename + 1 : req->uri;
+            strlcat(path, "/", sizeof(path));
+            strlcat(path, basename, sizeof(path));
+            strlcat(path, ".html", sizeof(path));
+        }
     }
 
     if (!is_public_uri(req->uri) && !token_is_valid(req)) {
