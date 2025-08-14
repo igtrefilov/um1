@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>О системе — УМ1</title>
+  <title>Шлюз и мониторинг — УМ1</title>
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="stylesheet" href="/style.css" />
 </head>
@@ -10,22 +10,19 @@
   <header>
     <h1>УМ1</h1>
     <nav>
-      <a href="/gateway/gateway.html">Шлюз и мониторинг</a>
+      <a href="/gateway/gateway.html" class="active">Шлюз и мониторинг</a>
       <a href="/settings/settings.html">Настройки</a>
       <a href="/update/update.html">Обновление</a>
       <a href="/diagnostics/diagnostics.html">Диагностика</a>
-      <a href="/about/about.html" class="active">О системе</a>
+      <a href="/about/about.html">О системе</a>
       <a href="#" id="logout_btn">Выход</a>
     </nav>
   </header>
   <div class="container">
     <div id="notif" class="notification"></div>
-    <div class="card">
-      <h2>Информация о системе</h2>
-      <div id="sysinfo">Загрузка...</div>
-    </div>
+    <!-- Раздел "Шлюз и мониторинг" пока пуст -->
   </div>
   <script src="/app.js"></script>
-  <script src="/about/about.js"></script>
+  <script src="/gateway/gateway.js"></script>
 </body>
 </html>
