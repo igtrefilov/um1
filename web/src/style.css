@@ -170,3 +170,11 @@ body.fullscreen-center {
 }
 
 .status-dot.on { background:#2e7d32; }
+
+.infographic {
+  margin-top: 1rem;
+  background: #2b2b2b;
+  padding: 8px;
+  border-radius: var(--radius);
+  white-space: pre-wrap;
+}
