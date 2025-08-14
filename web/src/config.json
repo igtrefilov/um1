@@ -66,5 +66,29 @@
     "enabled": true,
     "server_ip": "pool.ntp.org",
     "sync_interval_sec": 3600
+  },
+  "ip_profile": {
+    "ip1": {
+      "client": true,
+      "address": "192.168.0.10",
+      "port": 1234,
+      "transport": "TCP"
+    },
+    "ip2": {
+      "client": false,
+      "address": "192.168.0.20",
+      "port": 5678,
+      "transport": "UDP"
+    }
+  },
+  "mqtt_profile": {
+    "mqtt1": {
+      "tx_topic": "uart/tx1",
+      "rx_topic": "uart/rx1"
+    },
+    "mqtt2": {
+      "tx_topic": "uart/tx2",
+      "rx_topic": "uart/rx2"
+    }
   }
 }
