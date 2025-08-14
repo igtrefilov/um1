@@ -59,6 +59,28 @@ typedef struct {
     int sync_interval_sec;
 } sntp_config_t;
 
+typedef struct {
+    bool client;
+    char address[64];
+    int port;
+    char transport[8];
+} ip_profile_t;
+
+typedef struct {
+    char tx_topic[64];
+    char rx_topic[64];
+} mqtt_profile_t;
+
+typedef struct {
+    char intf[8];
+    char profile[8];
+} route_item_t;
+
+typedef struct {
+    route_item_t gateway[2];
+    route_item_t monitor[2];
+} routing_config_t;
+
 extern lan_config_t global_lan_config;
 extern um1_wifi_config_t global_wifi_config;
 extern um1_uart_config_t global_uart_config[2];
@@ -66,6 +88,9 @@ extern mqtt_config_t global_mqtt_config;
 extern stream_config_t global_tcp_config;
 extern stream_config_t global_udp_config;
 extern sntp_config_t global_sntp_config;
+extern ip_profile_t global_ip_profiles[2];
+extern mqtt_profile_t global_mqtt_profiles[2];
+extern routing_config_t global_routing_config;
 
 void read_config_and_apply(void);
 

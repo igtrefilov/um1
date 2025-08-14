@@ -90,5 +90,15 @@
       "tx_topic": "uart/tx2",
       "rx_topic": "uart/rx2"
     }
+  },
+  "routing": {
+    "gateway": {
+      "uart1": { "intf": "uart2", "profile": "ip1" },
+      "uart2": { "intf": "uart1", "profile": "ip1" }
+    },
+    "monitor": {
+      "uart1": { "intf": "lan", "profile": "ip1" },
+      "uart2": { "intf": "lan", "profile": "ip1" }
+    }
   }
 }
