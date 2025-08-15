@@ -21,6 +21,8 @@
 
 #include "um1_spiffs.h"
 
-void util_client_task(void *pvParameters);
+#define EXTERN_UTILITY_PORT 3333
+
+void extern_utility_start(void);
 
 #endif // UM1_EXTERN_UTILITY_H

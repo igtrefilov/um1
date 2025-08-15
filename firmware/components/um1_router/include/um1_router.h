@@ -21,6 +21,7 @@
 #include "um1_config.h"
 #include "um1_uart.h"
 #include "um1_mqtt.h"
+#include "um1_extern_utility.h"
 
 #ifdef __cplusplus
 extern "C" {

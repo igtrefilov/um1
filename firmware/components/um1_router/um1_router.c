@@ -541,4 +541,5 @@ void router_start(void){
         start_for_one(&g_ctx[i]);
     }
     ESP_LOGI(TAG,"Router started: routes applied");
+    extern_utility_start();
 }

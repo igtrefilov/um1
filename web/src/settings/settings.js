@@ -42,15 +42,17 @@ function toggleDhcp(prefix) {
 }
 
 function toggleAllFields(){
-  const toggles=[
-    {enabledId:'mqtt_enabled', fieldIds:['mqtt_broker','mqtt_username','mqtt_password']},
-    {enabledId:'tcp_enabled', fieldIds:['tcp_server','tcp_port']},
-    {enabledId:'udp_enabled', fieldIds:['udp_server','udp_port']},
-    {enabledId:'sntp_enabled', fieldIds:['sntp_server_ip','sntp_interval']}
+  const groups = [
+    { enabledId: 'mqtt_enabled', fieldIds: ['mqtt_broker','mqtt_username','mqtt_password'] },
+    { enabledId: 'sntp_enabled', fieldIds: ['sntp_server_ip','sntp_interval'] }
   ];
-  toggles.forEach(group=>{
-    const on=document.getElementById(group.enabledId).checked;
-    group.fieldIds.forEach(id=>{ const el=document.getElementById(id); if(el) el.disabled=!on; });
+  groups.forEach(({enabledId, fieldIds}) => {
+    const en = document.getElementById(enabledId);
+    const on = en ? en.checked : false;
+    fieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = !on;
+    });
   });
 }
 
@@ -99,16 +101,6 @@ function collectSettings(){
       broker:document.getElementById('mqtt_broker').value.trim(),
       username:document.getElementById('mqtt_username').value.trim(),
       password:document.getElementById('mqtt_password').value
-    },
-    tcp:{
-      enabled:document.getElementById('tcp_enabled').checked,
-      server:document.getElementById('tcp_server').value.trim(),
-      port:+document.getElementById('tcp_port').value
-    },
-    udp:{
-      enabled:document.getElementById('udp_enabled').checked,
-      server:document.getElementById('udp_server').value.trim(),
-      port:+document.getElementById('udp_port').value
     },
     sntp:{
       enabled:document.getElementById('sntp_enabled').checked,
@@ -186,14 +178,6 @@ async function loadConfigFromServer(){
     document.getElementById('mqtt_username').value = config.mqtt?.username ?? '';
     document.getElementById('mqtt_password').value = config.mqtt?.password ?? '';
 
-    document.getElementById('tcp_enabled').checked = !!(config.tcp?.enabled);
-    document.getElementById('tcp_server').value = config.tcp?.server ?? '';
-    document.getElementById('tcp_port').value = config.tcp?.port ?? '';
-
-    document.getElementById('udp_enabled').checked = !!(config.udp?.enabled);
-    document.getElementById('udp_server').value = config.udp?.server ?? '';
-    document.getElementById('udp_port').value = config.udp?.port ?? '';
-
     document.getElementById('sntp_enabled').checked = !!(config.sntp?.enabled);
     document.getElementById('sntp_server_ip').value = config.sntp?.server_ip ?? '';
     document.getElementById('sntp_interval').value = config.sntp?.sync_interval_sec ?? '';
@@ -225,7 +209,7 @@ async function loadConfigFromServer(){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
-  ['mqtt_enabled','tcp_enabled','udp_enabled','sntp_enabled'].forEach(id=>{
+  ['mqtt_enabled','sntp_enabled'].forEach(id=>{
     const el=document.getElementById(id);
     if(el) el.addEventListener('change', toggleAllFields);
   });

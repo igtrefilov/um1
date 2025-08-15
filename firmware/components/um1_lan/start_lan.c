@@ -44,10 +44,6 @@ static void got_ip_event_handler(void *arg, esp_event_base_t event_base,
     ESP_LOGI(TAG, "ETHGW:" IPSTR, IP2STR(&ip_info->gw));
     ESP_LOGI(TAG, "~~~~~~~~~~~");
 
-    esp_netif_t *netif = event->esp_netif;
-
-    xTaskCreate(lan_tcp_server_task, "lan_tcp_master", 4096, netif, tskIDLE_PRIORITY + 5, NULL);
-    xTaskCreate(lan_udp_server_task, "lan_udp_server", 4096, netif, tskIDLE_PRIORITY + 5, NULL);
 }
 
 void start_lan(void)

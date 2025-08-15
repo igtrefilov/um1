@@ -1,7 +1,6 @@
 const logDiv = document.getElementById("log");
 let ws;
 let pendingReboot = false;
-let statusInterval;
 
 function start_socket() {
   ws = new WebSocket(`ws://${location.host}/ws`);
@@ -34,40 +33,10 @@ function log(msg) {
   logDiv.scrollTop = logDiv.scrollHeight;
 }
 
-function updateServerStatus() {
-  fetch('/api/stream_status')
-    .then(r => r.json())
-    .then(s => {
-      const tcp = document.getElementById('tcp_status');
-      const udp = document.getElementById('udp_status');
-      if (tcp) tcp.classList.toggle('on', s.tcp);
-      if (udp) udp.classList.toggle('on', s.udp);
-    })
-    .catch(_ => {
-      const tcp = document.getElementById('tcp_status');
-      const udp = document.getElementById('udp_status');
-      if (tcp) tcp.classList.remove('on');
-      if (udp) udp.classList.remove('on');
-    });
-}
-
-function loadSidebar() {
-  fetch('/sidebar.html')
-    .then(resp => resp.text())
-    .then(html => {
-      document.getElementById('sidebar').innerHTML = html;
-    })
-    .catch(err => console.error('Failed to load sidebar:', err));
-}
-
 function startStream() {
   const uart1 = document.getElementById("uart1").checked;
   const uart2 = document.getElementById("uart2").checked;
-  const msg = JSON.stringify({
-    action: "START_STREAM",
-    uart1,
-    uart2
-  });
+  const msg = JSON.stringify({ action: "START_STREAM", uart1, uart2 });
 
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(msg);
@@ -155,21 +124,5 @@ async function sendReboot() {
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!pendingReboot) start_socket();
-  fetch('/api/config')
-    .then(r => r.json())
-    .then(cfg => {
-      if (cfg.tcp.enabled || cfg.udp.enabled) {
-        const st = document.getElementById('server_status');
-        if (st) {
-          st.style.display = 'block';
-          const tcp = document.getElementById('tcp_status');
-          const udp = document.getElementById('udp_status');
-          if (tcp) tcp.classList.remove('on');
-          if (udp) udp.classList.remove('on');
-          updateServerStatus();
-          statusInterval = setInterval(updateServerStatus, 5000);
-        }
-      }
-    })
-    .catch(_ => {});
 });
+

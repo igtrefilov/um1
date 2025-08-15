@@ -107,7 +107,6 @@ void util_client(int client_sock) {
 			char path[128];
 			if (sscanf(cmd + 6, "%127s", path) == 1) {
 				ESP_LOGI(TAG, "RMDIR %s", path);
-				extern void rmdir_recursive(const char *path, int sock);
 				rmdir_recursive(path, client_sock);
 				send_text(client_sock, "OK\n");
 			}
@@ -197,3 +196,61 @@ void util_client_task(void *pvParameters) {
     close(client_sock);
     vTaskDelete(NULL);
 }
+
+static TaskHandle_t s_util_srv_task = NULL;
+
+static void util_server_task(void *pv) {
+    for (;;) {
+        int s = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+        if (s < 0) { vTaskDelay(pdMS_TO_TICKS(1000)); continue; }
+
+        int yes = 1;
+        setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+
+        struct sockaddr_in addr = {0};
+        addr.sin_family = AF_INET;
+        addr.sin_port   = htons(EXTERN_UTILITY_PORT);
+        addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+        if (bind(s, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+            ESP_LOGE(TAG, "UTIL: bind(:%d) failed err=%d", EXTERN_UTILITY_PORT, errno);
+            close(s);
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            continue;
+        }
+        if (listen(s, 2) < 0) {
+            ESP_LOGE(TAG, "UTIL: listen(:%d) failed err=%d", EXTERN_UTILITY_PORT, errno);
+            close(s);
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            continue;
+        }
+
+        ESP_LOGI(TAG, "UTIL: listening :%d", EXTERN_UTILITY_PORT);
+
+        for (;;) {
+            struct sockaddr_in ca; socklen_t cl = sizeof(ca);
+            int c = accept(s, (struct sockaddr*)&ca, &cl);
+            if (c < 0) { vTaskDelay(pdMS_TO_TICKS(10)); break; }
+
+            int *pfd = malloc(sizeof(int));
+            if (!pfd) { close(c); continue; }
+            *pfd = c;
+
+            if (xTaskCreate(util_client_task, "util_client_task", 4096, pfd,
+                            tskIDLE_PRIORITY + 5, NULL) != pdPASS) {
+                free(pfd);
+                close(c);
+            }
+        }
+        close(s);
+    }
+}
+
+void extern_utility_start(void) {
+    if (s_util_srv_task == NULL) {
+        xTaskCreate(util_server_task, "util_server", 4096, NULL,
+                    tskIDLE_PRIORITY + 5, &s_util_srv_task);
+    }
+}
+
+

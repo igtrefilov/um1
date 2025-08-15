@@ -1,4 +1,3 @@
-// um1_wifi.c
 #include "um1_wifi.h"
 
 #include <string.h>
@@ -16,9 +15,6 @@
 
 static esp_netif_t *wifi_ap_netif  = NULL;
 static esp_netif_t *wifi_sta_netif = NULL;
-
-static TaskHandle_t ap_tcp_task  = NULL, ap_udp_task  = NULL;
-static TaskHandle_t sta_tcp_task = NULL, sta_udp_task = NULL;
 
 static const char *TAG = "um1_wifi";
 
@@ -80,36 +76,6 @@ static wifi_auth_mode_t norm_auth_from_str(const char *s) {
     return WIFI_AUTH_OPEN;
 }
 
-/* ===== Server tasks ===== */
-
-static void ap_tcp_server_task(void *pv) {
-    ESP_LOGI(TAG, "AP TCP server task start");
-    run_tcp_server(wifi_ap_netif, AP_TCP_PORT);
-    ap_tcp_task = NULL;
-    vTaskDelete(NULL);
-}
-
-static void ap_udp_server_task(void *pv) {
-    ESP_LOGI(TAG, "AP UDP server task start");
-    run_udp_server(wifi_ap_netif, AP_UDP_PORT);
-    ap_udp_task = NULL;
-    vTaskDelete(NULL);
-}
-
-static void sta_tcp_server_task(void *pv) {
-    ESP_LOGI(TAG, "STA TCP server task start");
-    run_tcp_server(wifi_sta_netif, STA_TCP_PORT);
-    sta_tcp_task = NULL;
-    vTaskDelete(NULL);
-}
-
-static void sta_udp_server_task(void *pv) {
-    ESP_LOGI(TAG, "STA UDP server task start");
-    run_udp_server(wifi_sta_netif, STA_UDP_PORT);
-    sta_udp_task = NULL;
-    vTaskDelete(NULL);
-}
-
 /* ===== Event Handlers ===== */
 
 static void wifi_event_handler_ap(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
@@ -124,10 +90,6 @@ static void wifi_event_handler_ap(void *arg, esp_event_base_t event_base, int32_
 
     } else if (event_id == WIFI_EVENT_AP_START) {
         ESP_LOGI(TAG, "AP started");
-        if (ap_tcp_task == NULL)
-            xTaskCreate(ap_tcp_server_task, "ap_tcp_server", 4096, NULL, tskIDLE_PRIORITY + 5, &ap_tcp_task);
-        if (ap_udp_task == NULL)
-            xTaskCreate(ap_udp_server_task, "ap_udp_server", 4096, NULL, tskIDLE_PRIORITY + 5, &ap_udp_task);
     }
 }
 
@@ -143,10 +105,6 @@ static void wifi_event_handler_sta(void *arg, esp_event_base_t event_base, int32
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(TAG, "STA: Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
-        if (sta_tcp_task == NULL)
-            xTaskCreate(sta_tcp_server_task, "sta_tcp_server", 4096, NULL, tskIDLE_PRIORITY + 5, &sta_tcp_task);
-        if (sta_udp_task == NULL)
-            xTaskCreate(sta_udp_server_task, "sta_udp_server", 4096, NULL, tskIDLE_PRIORITY + 5, &sta_udp_task);
     }
 }
 

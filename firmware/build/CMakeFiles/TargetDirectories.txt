@@ -705,13 +705,6 @@
 /home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_uart/CMakeFiles/install.dir
 /home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_uart/CMakeFiles/install/local.dir
 /home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_uart/CMakeFiles/install/strip.dir
-/home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_socket_server/CMakeFiles/__idf_um1_socket_server.dir
-/home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_socket_server/CMakeFiles/edit_cache.dir
-/home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_socket_server/CMakeFiles/rebuild_cache.dir
-/home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_socket_server/CMakeFiles/list_install_components.dir
-/home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_socket_server/CMakeFiles/install.dir
-/home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_socket_server/CMakeFiles/install/local.dir
-/home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_socket_server/CMakeFiles/install/strip.dir
 /home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_lan/CMakeFiles/__idf_um1_lan.dir
 /home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_lan/CMakeFiles/edit_cache.dir
 /home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_lan/CMakeFiles/rebuild_cache.dir
