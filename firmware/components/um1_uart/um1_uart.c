@@ -100,21 +100,5 @@ void send_uart_packet_with_timestamp(int uart_port, const uint8_t *data, size_t 
     // WebSocket
     send_uart_ws_data(uart_port, extended_buffer, total_len);
 
-    // TCP
-    if (global_tcp_config.enabled) {
-        //send_tcp_packet(uart_port, extended_buffer, total_len);
-    }
-
-    // UDP
-    if (global_udp_config.enabled) {
-        //send_udp_packet(uart_port, extended_buffer, total_len);
-    }
-
-    // MQTT
-    esp_mqtt_client_handle_t client = get_mqtt_client_handle();
-    if (client != NULL && global_mqtt_config.enabled && global_mqtt_config.tx_enabled) {
-        char topic[16];
-        snprintf(topic, sizeof(topic), "uart/%d", uart_port);
-        esp_mqtt_client_publish(client, topic, (const char *)extended_buffer, total_len, 1, 0);
-    }
+    router_on_uart_rx(uart_port, extended_buffer, total_len);
 }

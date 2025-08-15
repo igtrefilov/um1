@@ -677,6 +677,13 @@
 /home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_extern_utility/CMakeFiles/install.dir
 /home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_extern_utility/CMakeFiles/install/local.dir
 /home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_extern_utility/CMakeFiles/install/strip.dir
+/home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_router/CMakeFiles/__idf_um1_router.dir
+/home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_router/CMakeFiles/edit_cache.dir
+/home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_router/CMakeFiles/rebuild_cache.dir
+/home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_router/CMakeFiles/list_install_components.dir
+/home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_router/CMakeFiles/install.dir
+/home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_router/CMakeFiles/install/local.dir
+/home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_router/CMakeFiles/install/strip.dir
 /home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_mqtt/CMakeFiles/__idf_um1_mqtt.dir
 /home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_mqtt/CMakeFiles/edit_cache.dir
 /home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_mqtt/CMakeFiles/rebuild_cache.dir

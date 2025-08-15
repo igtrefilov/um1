@@ -439,6 +439,11 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
+  include("/home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_router/cmake_install.cmake")
+endif()
+
+if(NOT CMAKE_INSTALL_LOCAL_ONLY)
+  # Include the install script for the subdirectory.
   include("/home/ilya/esp/ESP32/projects/work/um1/firmware/build/esp-idf/um1_mqtt/cmake_install.cmake")
 endif()
 

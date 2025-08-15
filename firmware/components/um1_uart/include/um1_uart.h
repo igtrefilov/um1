@@ -1,3 +1,6 @@
+#ifndef UM1_UART_H
+#define UM1_UART_H
+
 #include <string.h>
 #include <lwip/sockets.h>
 #include <lwip/inet.h>
@@ -12,6 +15,7 @@
 #include "um1_config.h"
 #include "um1_mqtt.h"
 #include "um1_sntp.h"
+#include "um1_router.h"
 
 #define UART1_TXD 2
 #define UART1_RXD 4
@@ -33,3 +37,5 @@ uint64_t reverse_bytes_u64(uint64_t value);
 
 extern bool tcp_connected;
 extern bool udp_connected;
+
+#endif // UM1_UART_H

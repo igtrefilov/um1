@@ -66,6 +66,7 @@ void app_main(void)
 	start_sntp();
 	vTaskDelay(pdMS_TO_TICKS(1000));
 
+	router_start();
 	token_auth_init();
 
     while (1) {
