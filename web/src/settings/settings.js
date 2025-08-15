@@ -40,6 +40,7 @@ function toggleDhcp(prefix) {
     if(el) el.disabled = dhcp;
   });
 }
+
 function toggleAllFields(){
   const toggles=[
     {enabledId:'mqtt_enabled', fieldIds:['mqtt_broker','mqtt_username','mqtt_password']},
@@ -52,128 +53,165 @@ function toggleAllFields(){
     group.fieldIds.forEach(id=>{ const el=document.getElementById(id); if(el) el.disabled=!on; });
   });
 }
+
 function collectSettings(){
   const settings={
     lan:{
       dhcp: document.getElementById('lan_dhcp').checked,
-      static_ip: document.getElementById('lan_static_ip').value,
-      subnet: document.getElementById('lan_subnet').value,
-      gateway: document.getElementById('lan_gateway').value
+      static_ip: document.getElementById('lan_static_ip').value.trim(),
+      subnet: document.getElementById('lan_subnet').value.trim(),
+      gateway: document.getElementById('lan_gateway').value.trim()
     },
     wifi:{
       enabled: document.getElementById('wifi_enabled').checked,
       mode: document.getElementById('wifi_mode').value,
       ap:{
-        ssid: document.getElementById('wifi_ap_ssid').value,
+        ssid: document.getElementById('wifi_ap_ssid').value.trim(),
         password: document.getElementById('wifi_ap_password').value,
         authmode: document.getElementById('wifi_ap_authmode').value,
         dhcp: document.getElementById('wifi_ap_dhcp').checked,
-        static_ip: document.getElementById('wifi_ap_static_ip').value,
-        subnet: document.getElementById('wifi_ap_subnet').value,
-        gateway: document.getElementById('wifi_ap_gateway').value
+        static_ip: document.getElementById('wifi_ap_static_ip').value.trim(),
+        subnet: document.getElementById('wifi_ap_subnet').value.trim(),
+        gateway: document.getElementById('wifi_ap_gateway').value.trim()
       },
       sta:{
-        ssid: document.getElementById('wifi_sta_ssid').value,
+        ssid: document.getElementById('wifi_sta_ssid').value.trim(),
         password: document.getElementById('wifi_sta_password').value,
         authmode: document.getElementById('wifi_sta_authmode').value,
         dhcp: document.getElementById('wifi_sta_dhcp').checked,
-        static_ip: document.getElementById('wifi_sta_static_ip').value,
-        subnet: document.getElementById('wifi_sta_subnet').value,
-        gateway: document.getElementById('wifi_sta_gateway').value
+        static_ip: document.getElementById('wifi_sta_static_ip').value.trim(),
+        subnet: document.getElementById('wifi_sta_subnet').value.trim(),
+        gateway: document.getElementById('wifi_sta_gateway').value.trim()
       }
     },
-    uart1:{ baudrate:+document.getElementById('uart1_baudrate').value, parity:document.getElementById('uart1_parity').value, stop_bits:+document.getElementById('uart1_stop_bits').value },
-    uart2:{ baudrate:+document.getElementById('uart2_baudrate').value, parity:document.getElementById('uart2_parity').value, stop_bits:+document.getElementById('uart2_stop_bits').value },
-    mqtt:{ enabled:document.getElementById('mqtt_enabled').checked, broker:document.getElementById('mqtt_broker').value, username:document.getElementById('mqtt_username').value, password:document.getElementById('mqtt_password').value },
-    tcp:{ enabled:document.getElementById('tcp_enabled').checked, server:document.getElementById('tcp_server').value, port:+document.getElementById('tcp_port').value },
-    udp:{ enabled:document.getElementById('udp_enabled').checked, server:document.getElementById('udp_server').value, port:+document.getElementById('udp_port').value },
-    sntp:{ enabled:document.getElementById('sntp_enabled').checked, server_ip:document.getElementById('sntp_server_ip').value, sync_interval_sec:+document.getElementById('sntp_interval').value },
+    uart1:{
+      baudrate:+document.getElementById('uart1_baudrate').value,
+      parity:document.getElementById('uart1_parity').value,
+      stop_bits:+document.getElementById('uart1_stop_bits').value
+    },
+    uart2:{
+      baudrate:+document.getElementById('uart2_baudrate').value,
+      parity:document.getElementById('uart2_parity').value,
+      stop_bits:+document.getElementById('uart2_stop_bits').value
+    },
+    mqtt:{
+      enabled:document.getElementById('mqtt_enabled').checked,
+      broker:document.getElementById('mqtt_broker').value.trim(),
+      username:document.getElementById('mqtt_username').value.trim(),
+      password:document.getElementById('mqtt_password').value
+    },
+    tcp:{
+      enabled:document.getElementById('tcp_enabled').checked,
+      server:document.getElementById('tcp_server').value.trim(),
+      port:+document.getElementById('tcp_port').value
+    },
+    udp:{
+      enabled:document.getElementById('udp_enabled').checked,
+      server:document.getElementById('udp_server').value.trim(),
+      port:+document.getElementById('udp_port').value
+    },
+    sntp:{
+      enabled:document.getElementById('sntp_enabled').checked,
+      server_ip:document.getElementById('sntp_server_ip').value.trim(),
+      sync_interval_sec:+document.getElementById('sntp_interval').value
+    },
     ip_profile:{
       ip1:{
         client:document.getElementById('ip1_client').checked,
-        address:document.getElementById('ip1_address').value,
+        ip:document.getElementById('ip1_address').value.trim(),
+        address:document.getElementById('ip1_address').value.trim(),
         port:+document.getElementById('ip1_port').value,
         transport:document.getElementById('ip1_transport').value
       },
       ip2:{
         client:document.getElementById('ip2_client').checked,
-        address:document.getElementById('ip2_address').value,
+        ip:document.getElementById('ip2_address').value.trim(),
+        address:document.getElementById('ip2_address').value.trim(),
         port:+document.getElementById('ip2_port').value,
         transport:document.getElementById('ip2_transport').value
       }
     },
     mqtt_profile:{
       mqtt1:{
-        tx_topic:document.getElementById('mqtt1_pub_topic').value,
-        rx_topic:document.getElementById('mqtt1_sub_topic').value
+        tx_topic:document.getElementById('mqtt1_pub_topic').value.trim(),
+        rx_topic:document.getElementById('mqtt1_sub_topic').value.trim()
       },
       mqtt2:{
-        tx_topic:document.getElementById('mqtt2_pub_topic').value,
-        rx_topic:document.getElementById('mqtt2_sub_topic').value
+        tx_topic:document.getElementById('mqtt2_pub_topic').value.trim(),
+        rx_topic:document.getElementById('mqtt2_sub_topic').value.trim()
       }
     }
   };
   fetch('/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(settings)})
     .then(r=>{ if(r.ok) showNotification('✅ Настройки успешно сохранены'); else showNotification('❌ Ошибка сохранения',true); })
-    .catch(_=>showNotification('❌ Ошибка соединения с сервером',true));
+    .catch(()=>showNotification('❌ Ошибка соединения с сервером',true));
 }
+
 async function loadConfigFromServer(){
   try{
     const response=await fetch('/api/config');
     const config=await response.json();
-    document.getElementById('lan_dhcp').checked = config.lan.dhcp;
-    document.getElementById('lan_static_ip').value = config.lan.static_ip;
-    document.getElementById('lan_subnet').value = config.lan.subnet;
-    document.getElementById('lan_gateway').value = config.lan.gateway;
-    document.getElementById('wifi_enabled').checked = config.wifi.enabled;
-    document.getElementById('wifi_mode').value = config.wifi.mode;
-    document.getElementById('wifi_ap_ssid').value = config.wifi.ap.ssid;
-    document.getElementById('wifi_ap_password').value = config.wifi.ap.password;
-    document.getElementById('wifi_ap_authmode').value = config.wifi.ap.authmode;
-    document.getElementById('wifi_ap_dhcp').checked = config.wifi.ap.dhcp;
-    document.getElementById('wifi_ap_static_ip').value = config.wifi.ap.static_ip;
-    document.getElementById('wifi_ap_subnet').value = config.wifi.ap.subnet;
-    document.getElementById('wifi_ap_gateway').value = config.wifi.ap.gateway;
-    document.getElementById('wifi_sta_ssid').value = config.wifi.sta.ssid;
-    document.getElementById('wifi_sta_password').value = config.wifi.sta.password;
-    document.getElementById('wifi_sta_authmode').value = config.wifi.sta.authmode;
-    document.getElementById('wifi_sta_dhcp').checked = config.wifi.sta.dhcp;
-    document.getElementById('wifi_sta_static_ip').value = config.wifi.sta.static_ip;
-    document.getElementById('wifi_sta_subnet').value = config.wifi.sta.subnet;
-    document.getElementById('wifi_sta_gateway').value = config.wifi.sta.gateway;
 
-    document.getElementById('uart1_baudrate').value=config.uart1.baudrate;
-    document.getElementById('uart1_parity').value=config.uart1.parity;
-    document.getElementById('uart1_stop_bits').value=config.uart1.stop_bits;
-    document.getElementById('uart2_baudrate').value=config.uart2.baudrate;
-    document.getElementById('uart2_parity').value=config.uart2.parity;
-    document.getElementById('uart2_stop_bits').value=config.uart2.stop_bits;
-    document.getElementById('mqtt_enabled').checked=config.mqtt.enabled;
-    document.getElementById('mqtt_broker').value=config.mqtt.broker;
-    document.getElementById('mqtt_username').value=config.mqtt.username;
-    document.getElementById('mqtt_password').value=config.mqtt.password;
-    document.getElementById('tcp_enabled').checked=config.tcp.enabled;
-    document.getElementById('tcp_server').value=config.tcp.server;
-    document.getElementById('tcp_port').value=config.tcp.port;
-    document.getElementById('udp_enabled').checked=config.udp.enabled;
-    document.getElementById('udp_server').value=config.udp.server;
-    document.getElementById('udp_port').value=config.udp.port;
-    document.getElementById('sntp_enabled').checked=config.sntp.enabled;
-    document.getElementById('sntp_server_ip').value=config.sntp.server_ip;
-    document.getElementById('sntp_interval').value=config.sntp.sync_interval_sec;
+    document.getElementById('lan_dhcp').checked = !!(config.lan?.dhcp);
+    document.getElementById('lan_static_ip').value = config.lan?.static_ip ?? '';
+    document.getElementById('lan_subnet').value = config.lan?.subnet ?? '';
+    document.getElementById('lan_gateway').value = config.lan?.gateway ?? '';
 
-    document.getElementById('ip1_client').checked=config.ip_profile.ip1.client;
-    document.getElementById('ip1_address').value=config.ip_profile.ip1.address;
-    document.getElementById('ip1_port').value=config.ip_profile.ip1.port;
-    document.getElementById('ip1_transport').value=config.ip_profile.ip1.transport;
-    document.getElementById('ip2_client').checked=config.ip_profile.ip2.client;
-    document.getElementById('ip2_address').value=config.ip_profile.ip2.address;
-    document.getElementById('ip2_port').value=config.ip_profile.ip2.port;
-    document.getElementById('ip2_transport').value=config.ip_profile.ip2.transport;
-    document.getElementById('mqtt1_pub_topic').value=config.mqtt_profile.mqtt1.tx_topic;
-    document.getElementById('mqtt1_sub_topic').value=config.mqtt_profile.mqtt1.rx_topic;
-    document.getElementById('mqtt2_pub_topic').value=config.mqtt_profile.mqtt2.tx_topic;
-    document.getElementById('mqtt2_sub_topic').value=config.mqtt_profile.mqtt2.rx_topic;
+    document.getElementById('wifi_enabled').checked = !!(config.wifi?.enabled);
+    document.getElementById('wifi_mode').value = config.wifi?.mode ?? 'ap';
+    document.getElementById('wifi_ap_ssid').value = config.wifi?.ap?.ssid ?? '';
+    document.getElementById('wifi_ap_password').value = config.wifi?.ap?.password ?? '';
+    document.getElementById('wifi_ap_authmode').value = config.wifi?.ap?.authmode ?? 'open';
+    document.getElementById('wifi_ap_dhcp').checked = !!(config.wifi?.ap?.dhcp);
+    document.getElementById('wifi_ap_static_ip').value = config.wifi?.ap?.static_ip ?? '';
+    document.getElementById('wifi_ap_subnet').value = config.wifi?.ap?.subnet ?? '';
+    document.getElementById('wifi_ap_gateway').value = config.wifi?.ap?.gateway ?? '';
+    document.getElementById('wifi_sta_ssid').value = config.wifi?.sta?.ssid ?? '';
+    document.getElementById('wifi_sta_password').value = config.wifi?.sta?.password ?? '';
+    document.getElementById('wifi_sta_authmode').value = config.wifi?.sta?.authmode ?? 'open';
+    document.getElementById('wifi_sta_dhcp').checked = !!(config.wifi?.sta?.dhcp);
+    document.getElementById('wifi_sta_static_ip').value = config.wifi?.sta?.static_ip ?? '';
+    document.getElementById('wifi_sta_subnet').value = config.wifi?.sta?.subnet ?? '';
+    document.getElementById('wifi_sta_gateway').value = config.wifi?.sta?.gateway ?? '';
+
+    document.getElementById('uart1_baudrate').value = config.uart1?.baudrate ?? '';
+    document.getElementById('uart1_parity').value = config.uart1?.parity ?? 'none';
+    document.getElementById('uart1_stop_bits').value = config.uart1?.stop_bits ?? '1';
+    document.getElementById('uart2_baudrate').value = config.uart2?.baudrate ?? '';
+    document.getElementById('uart2_parity').value = config.uart2?.parity ?? 'none';
+    document.getElementById('uart2_stop_bits').value = config.uart2?.stop_bits ?? '1';
+
+    document.getElementById('mqtt_enabled').checked = !!(config.mqtt?.enabled);
+    document.getElementById('mqtt_broker').value = config.mqtt?.broker ?? '';
+    document.getElementById('mqtt_username').value = config.mqtt?.username ?? '';
+    document.getElementById('mqtt_password').value = config.mqtt?.password ?? '';
+
+    document.getElementById('tcp_enabled').checked = !!(config.tcp?.enabled);
+    document.getElementById('tcp_server').value = config.tcp?.server ?? '';
+    document.getElementById('tcp_port').value = config.tcp?.port ?? '';
+
+    document.getElementById('udp_enabled').checked = !!(config.udp?.enabled);
+    document.getElementById('udp_server').value = config.udp?.server ?? '';
+    document.getElementById('udp_port').value = config.udp?.port ?? '';
+
+    document.getElementById('sntp_enabled').checked = !!(config.sntp?.enabled);
+    document.getElementById('sntp_server_ip').value = config.sntp?.server_ip ?? '';
+    document.getElementById('sntp_interval').value = config.sntp?.sync_interval_sec ?? '';
+
+    document.getElementById('ip1_client').checked = !!(config.ip_profile?.ip1?.client);
+    document.getElementById('ip1_address').value = (config.ip_profile?.ip1?.ip ?? config.ip_profile?.ip1?.address ?? '');
+    document.getElementById('ip1_port').value = config.ip_profile?.ip1?.port ?? '';
+    document.getElementById('ip1_transport').value = config.ip_profile?.ip1?.transport ?? 'TCP';
+
+    document.getElementById('ip2_client').checked = !!(config.ip_profile?.ip2?.client);
+    document.getElementById('ip2_address').value = (config.ip_profile?.ip2?.ip ?? config.ip_profile?.ip2?.address ?? '');
+    document.getElementById('ip2_port').value = config.ip_profile?.ip2?.port ?? '';
+    document.getElementById('ip2_transport').value = config.ip_profile?.ip2?.transport ?? 'TCP';
+
+    document.getElementById('mqtt1_pub_topic').value = config.mqtt_profile?.mqtt1?.tx_topic ?? '';
+    document.getElementById('mqtt1_sub_topic').value = config.mqtt_profile?.mqtt1?.rx_topic ?? '';
+    document.getElementById('mqtt2_pub_topic').value = config.mqtt_profile?.mqtt2?.tx_topic ?? '';
+    document.getElementById('mqtt2_sub_topic').value = config.mqtt_profile?.mqtt2?.rx_topic ?? '';
 
     toggleLanFields();
     toggleWifiFields();
@@ -185,15 +223,23 @@ async function loadConfigFromServer(){
     showNotification('❌ Ошибка загрузки настроек', true);
   }
 }
+
 document.addEventListener('DOMContentLoaded',()=>{
   ['mqtt_enabled','tcp_enabled','udp_enabled','sntp_enabled'].forEach(id=>{
-    document.getElementById(id).addEventListener('change', toggleAllFields);
+    const el=document.getElementById(id);
+    if(el) el.addEventListener('change', toggleAllFields);
   });
-  document.getElementById('lan_dhcp').addEventListener('change', toggleLanFields);
-  document.getElementById('wifi_enabled').addEventListener('change', toggleWifiFields);
-  document.getElementById('wifi_mode').addEventListener('change', toggleWifiModeFields);
-  document.getElementById('wifi_ap_dhcp').addEventListener('change', () => toggleDhcp('wifi_ap'));
-  document.getElementById('wifi_sta_dhcp').addEventListener('change', () => toggleDhcp('wifi_sta'));
+  const lanDhcp=document.getElementById('lan_dhcp');
+  if(lanDhcp) lanDhcp.addEventListener('change', toggleLanFields);
+  const wifiEnabled=document.getElementById('wifi_enabled');
+  if(wifiEnabled) wifiEnabled.addEventListener('change', toggleWifiFields);
+  const wifiMode=document.getElementById('wifi_mode');
+  if(wifiMode) wifiMode.addEventListener('change', toggleWifiModeFields);
+  const wifiApDhcp=document.getElementById('wifi_ap_dhcp');
+  if(wifiApDhcp) wifiApDhcp.addEventListener('change', () => toggleDhcp('wifi_ap'));
+  const wifiStaDhcp=document.getElementById('wifi_sta_dhcp');
+  if(wifiStaDhcp) wifiStaDhcp.addEventListener('change', () => toggleDhcp('wifi_sta'));
+
   toggleLanFields();
   toggleWifiFields();
   toggleWifiModeFields();
@@ -238,3 +284,4 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
   }
 });
+

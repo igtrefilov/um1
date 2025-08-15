@@ -153,17 +153,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function fmtIp(intf, profile) {
-    const p = cfg.ip_profile[profile];
-    const role = p.client ? 'Client' : 'Server';
-    const serverIp = p.client
-      ? p.address
-      : intf === 'lan'
-      ? cfg.lan.static_ip
-      : intf === 'ap'
-      ? cfg.wifi.ap.static_ip
-      : cfg.wifi.sta.static_ip;
-    return `${intf.toUpperCase()}[${role}][${serverIp}][${p.port}][${p.transport}]`;
-  }
+  const p = cfg.ip_profile?.[profile] ?? {};
+  const role = p.client ? 'Client' : 'Server';
+  const addr = (p.ip ?? p.address ?? '');
+  const port = p.port ?? '';
+  const transport = p.transport ?? '';
+  return `${intf.toUpperCase()}[${role}][${addr}][${port}][${transport}]`;
+}
 
   function fmtMqtt(intf, profile) {
     const p = cfg.mqtt_profile[profile];
