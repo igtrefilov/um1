@@ -23,6 +23,9 @@
 #define UART2_TXD 13
 #define UART2_RXD 35
 
+#define UART1_RTS 5
+#define UART2_RTS 14
+
 #define UART_PORT_NUM_1    1
 #define UART_PORT_NUM_2    2
 #define UART_BAUD_RATE     9600

@@ -17,11 +17,15 @@
 #include "lwip/inet.h"
 
 #include "esp_netif.h"
+#include "driver/gpio.h"
 
 #include "um1_config.h"
 #include "um1_uart.h"
 #include "um1_mqtt.h"
 #include "um1_extern_utility.h"
+
+#define GATE_UART1_GPIO  GPIO_NUM_5
+#define GATE_UART2_GPIO  GPIO_NUM_14
 
 #ifdef __cplusplus
 extern "C" {
