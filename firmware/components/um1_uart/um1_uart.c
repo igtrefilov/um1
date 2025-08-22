@@ -13,7 +13,8 @@ void start_uart(void){
 				  strcmp(uart1_cfg.parity, "odd") == 0 ? UART_PARITY_ODD : UART_PARITY_DISABLE,
 		.stop_bits = uart1_cfg.stop_bits == 2 ? UART_STOP_BITS_2 : UART_STOP_BITS_1,
 		.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-		.source_clk = UART_SCLK_DEFAULT
+		.source_clk = UART_SCLK_DEFAULT,
+		.rx_flow_ctrl_thresh = 0
 	};
 
 	uart_config_t uart2_config = {
@@ -23,7 +24,8 @@ void start_uart(void){
 				  strcmp(uart2_cfg.parity, "odd") == 0 ? UART_PARITY_ODD : UART_PARITY_DISABLE,
 		.stop_bits = uart2_cfg.stop_bits == 2 ? UART_STOP_BITS_2 : UART_STOP_BITS_1,
 		.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-		.source_clk = UART_SCLK_DEFAULT
+		.source_clk = UART_SCLK_DEFAULT,
+		.rx_flow_ctrl_thresh = 0
 	};
 
 	int intr_alloc_flags = 0;
@@ -34,8 +36,11 @@ void start_uart(void){
 	ESP_ERROR_CHECK(uart_param_config(UART_PORT_NUM_1, &uart1_config));
 	ESP_ERROR_CHECK(uart_param_config(UART_PORT_NUM_2, &uart2_config));
 
-	ESP_ERROR_CHECK(uart_set_pin(UART_PORT_NUM_1, UART1_TXD, UART1_RXD, -1, -1));
-	ESP_ERROR_CHECK(uart_set_pin(UART_PORT_NUM_2, UART2_TXD, UART2_RXD, -1, -1));
+	ESP_ERROR_CHECK(uart_set_pin(UART_PORT_NUM_1, UART1_TXD, UART1_RXD, UART1_RTS, -1));
+	ESP_ERROR_CHECK(uart_set_pin(UART_PORT_NUM_2, UART2_TXD, UART2_RXD, UART2_RTS, -1));
+
+	ESP_ERROR_CHECK(uart_set_mode(UART_PORT_NUM_1, UART_MODE_RS485_HALF_DUPLEX));
+	ESP_ERROR_CHECK(uart_set_mode(UART_PORT_NUM_2, UART_MODE_RS485_HALF_DUPLEX));
 
 	xTaskCreate(&uart1_task, "uart1_task", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);
 	xTaskCreate(&uart2_task, "uart2_task", 4096, NULL, tskIDLE_PRIORITY + 5, NULL);

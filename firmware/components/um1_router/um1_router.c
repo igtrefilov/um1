@@ -69,19 +69,6 @@ void router_set_netif_lan(esp_netif_t *n){ g_lan = n; }
 void router_set_netif_ap(esp_netif_t *n){ g_ap  = n; }
 void router_set_netif_sta(esp_netif_t *n){ g_sta = n; }
 
-static void gate_gpio_init(void){
-	gpio_config_t io = {
-		.pin_bit_mask = (1ULL << GATE_UART1_GPIO) | (1ULL << GATE_UART2_GPIO),
-	   .mode = GPIO_MODE_OUTPUT,
-		.pull_up_en = GPIO_PULLUP_DISABLE,
-	   .pull_down_en = GPIO_PULLDOWN_DISABLE,
-	   .intr_type = GPIO_INTR_DISABLE
-	};
-	gpio_config(&io);
-	gpio_set_level(GATE_UART1_GPIO, 0);
-	gpio_set_level(GATE_UART2_GPIO, 0);
-}
-
 static inline gpio_num_t gate_pin_for_uart(int uart_port){
     return (uart_port == 2) ? GATE_UART2_GPIO : GATE_UART1_GPIO;
 }
@@ -216,21 +203,10 @@ static void mon_tee_matching(const rt_ctx_t *src_ctx, const uint8_t *data, size_
 
 static void gate_send_uart(int uart_port, const uint8_t *data, size_t len){
     int port = (uart_port==2)?UART_PORT_NUM_2:UART_PORT_NUM_1;
-    gpio_num_t pin = gate_pin_for_uart(uart_port);
-
-    uart_disable_rx_intr(port);
-    uart_flush_input(port);
-
-    gpio_set_level(pin, 1);
 
     uart_write_bytes(port, (const char*)data, len);
     uart_wait_tx_done(port, portMAX_DELAY);
 
-    //esp_rom_delay_us(10);
-	gpio_set_level(pin, 0);
-
-	uart_flush_input(port);
-	uart_enable_rx_intr(port);
 }
 
 static void gate_send_ip(rt_ctx_t *ctx, const uint8_t *data, size_t len){
@@ -559,7 +535,6 @@ static void start_for_one(rt_ctx_t *ctx){
 
 void router_start(void){
     memset(g_ctx,0,sizeof(g_ctx));
-    gate_gpio_init();
     for(int i=0;i<2;i++){
         const route_item_t *g = &global_routing_config.gateway[i];
         const route_item_t *m = &global_routing_config.monitor[i];
