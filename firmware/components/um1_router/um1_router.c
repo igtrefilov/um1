@@ -69,14 +69,52 @@ void router_set_netif_lan(esp_netif_t *n){ g_lan = n; }
 void router_set_netif_ap(esp_netif_t *n){ g_ap  = n; }
 void router_set_netif_sta(esp_netif_t *n){ g_sta = n; }
 
-static inline gpio_num_t gate_pin_for_uart(int uart_port){
-    return (uart_port == 2) ? GATE_UART2_GPIO : GATE_UART1_GPIO;
+static esp_netif_t *netif_for_ifc(if_t ifc) {
+    switch (ifc) {
+        case IF_LAN: return router_get_netif_lan();
+        case IF_AP:  return router_get_netif_ap();
+        case IF_STA: return router_get_netif_sta();
+        default:     return NULL;
+    }
+}
+
+static inline bool is_ip_interface(if_t ifc){
+    return (ifc==IF_LAN || ifc==IF_AP || ifc==IF_STA);
+}
+
+static in_addr_t ip_of_if(if_t ifc) {
+    esp_netif_t *n = netif_for_ifc(ifc);
+    if (!n) return htonl(INADDR_ANY);
+    esp_netif_ip_info_t ip;
+    if (esp_netif_get_ip_info(n, &ip) == ESP_OK) return ip.ip.addr;
+    return htonl(INADDR_ANY);
+}
+
+static bool bind_local_to_if(int sock, if_t ifc) {
+    in_addr_t ip = ip_of_if(ifc);
+    if (ip == htonl(INADDR_ANY)) return false;
+    struct sockaddr_in l = {0};
+    l.sin_family = AF_INET;
+    l.sin_port   = htons(0);
+    l.sin_addr.s_addr = ip;
+    if (bind(sock, (struct sockaddr*)&l, sizeof(l)) < 0) {
+        ESP_LOGE(TAG, "bind(local-if) failed, err=%d", errno);
+        return false;
+    }
+    return true;
+}
+
+static bool wait_ip_ready(if_t ifc, TickType_t delay_ms){
+    if (!is_ip_interface(ifc)) return true;
+    in_addr_t ip = ip_of_if(ifc);
+    if (ip == htonl(INADDR_ANY)) {
+        vTaskDelay(pdMS_TO_TICKS(delay_ms));
+        return false;
+    }
+    return true;
 }
 
 static inline int ci_strncmp(const char *a, const char *b, size_t n){
-#if defined(__APPLE__) || defined(__linux__)
-    return strncasecmp(a,b,n);
-#else
     while (n && *a && *b){
         char ca = (*a>='A' && *a<='Z')? *a+32 : *a;
         char cb = (*b>='A' && *b<='Z')? *b+32 : *b;
@@ -85,13 +123,9 @@ static inline int ci_strncmp(const char *a, const char *b, size_t n){
     }
     if (n==0) return 0;
     return *a - *b;
-#endif
 }
 
 static inline int ci_strcmp(const char *a, const char *b){
-#if defined(__APPLE__) || defined(__linux__)
-    return strcasecmp(a,b);
-#else
     while (*a && *b){
         char ca = (*a>='A' && *a<='Z')? *a+32 : *a;
         char cb = (*b>='A' && *b<='Z')? *b+32 : *b;
@@ -99,7 +133,6 @@ static inline int ci_strcmp(const char *a, const char *b){
         ++a; ++b;
     }
     return (*a?1:0) - (*b?1:0);
-#endif
 }
 
 static if_t parse_ifc(const char *s){
@@ -144,7 +177,7 @@ static void fill_endpoint_from_route(const route_item_t *ri, endpoint_t *ep){
 
 static void mon_send_udp(rt_ctx_t *ctx, const uint8_t *data, size_t len){
     if (!ctx) return;
-    if (ctx->mon.ifc!=IF_LAN && ctx->mon.ifc!=IF_AP && ctx->mon.ifc!=IF_STA) return;
+    if (!is_ip_interface(ctx->mon.ifc)) return;
     if (ctx->mon.ip.tp!=TP_UDP || ctx->mon_udp.udp_sock<0) return;
     for(size_t i=0;i<ctx->mon_udp.udp_peer_cnt;i++){
         sendto(ctx->mon_udp.udp_sock, data, len, 0,
@@ -173,7 +206,7 @@ static bool mon_cfg_equal(const rt_ctx_t *a, const rt_ctx_t *b){
         return strcmp(a->mon.tx_topic, b->mon.tx_topic) == 0 &&
                strcmp(a->mon.rx_topic, b->mon.rx_topic) == 0;
     }
-    if (a->mon.ifc==IF_LAN || a->mon.ifc==IF_AP || a->mon.ifc==IF_STA){
+    if (is_ip_interface(a->mon.ifc)){
         return a->mon.ip.tp == b->mon.ip.tp && a->mon.ip.port == b->mon.ip.port;
     }
     return false;
@@ -184,13 +217,13 @@ static void mon_tee_matching(const rt_ctx_t *src_ctx, const uint8_t *data, size_
     for (int i=0;i<2;i++){
         rt_ctx_t *dst = &g_ctx[i];
         if (!mon_cfg_equal(src_ctx, dst)) continue;
-        if ((dst->mon.ifc==IF_LAN || dst->mon.ifc==IF_AP || dst->mon.ifc==IF_STA) &&
-             dst->mon.ip.tp==TP_UDP && !udp_done && dst->mon_udp.udp_sock>=0){
+        if (is_ip_interface(dst->mon.ifc) &&
+            dst->mon.ip.tp==TP_UDP && !udp_done && dst->mon_udp.udp_sock>=0){
             mon_send_udp(dst, data, len);
             udp_done = true;
         }
-        if ((dst->mon.ifc==IF_LAN || dst->mon.ifc==IF_AP || dst->mon.ifc==IF_STA) &&
-             dst->mon.ip.tp==TP_TCP && !tcp_done && dst->mon_tcp.listen_fd>=0){
+        if (is_ip_interface(dst->mon.ifc) &&
+            dst->mon.ip.tp==TP_TCP && !tcp_done && dst->mon_tcp.listen_fd>=0){
             mon_send_tcp(dst, data, len);
             tcp_done = true;
         }
@@ -203,10 +236,8 @@ static void mon_tee_matching(const rt_ctx_t *src_ctx, const uint8_t *data, size_
 
 static void gate_send_uart(int uart_port, const uint8_t *data, size_t len){
     int port = (uart_port==2)?UART_PORT_NUM_2:UART_PORT_NUM_1;
-
     uart_write_bytes(port, (const char*)data, len);
     uart_wait_tx_done(port, portMAX_DELAY);
-
 }
 
 static void gate_send_ip(rt_ctx_t *ctx, const uint8_t *data, size_t len){
@@ -276,21 +307,28 @@ void router_on_mqtt_message(const char *topic, const uint8_t *data, size_t len){
 static void mon_udp_server_task(void *pv){
     rt_ctx_t *ctx = (rt_ctx_t*)pv;
     for(;;){
+        if (!wait_ip_ready(ctx->mon.ifc, 500)) continue;
+
         ctx->mon_udp.udp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
         int s = ctx->mon_udp.udp_sock;
         if (s<0){ vTaskDelay(pdMS_TO_TICKS(500)); continue; }
+
         int yes=1; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(yes));
+
         struct sockaddr_in bindaddr={0};
         bindaddr.sin_family=AF_INET;
         bindaddr.sin_port=htons(ctx->mon.ip.port);
-        bindaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+        bindaddr.sin_addr.s_addr = ip_of_if(ctx->mon.ifc);
+
         if (bind(s,(struct sockaddr*)&bindaddr,sizeof(bindaddr)) < 0){
-            ESP_LOGE(TAG,"MON-UDP: bind(:%d) failed, err=%d", ctx->mon.ip.port, errno);
+            ESP_LOGE(TAG,"MON-UDP: bind(%s:%d) failed, err=%d",
+                     inet_ntoa(*(struct in_addr*)&bindaddr.sin_addr.s_addr), ctx->mon.ip.port, errno);
             close(s); ctx->mon_udp.udp_sock = -1;
             vTaskDelay(pdMS_TO_TICKS(500));
             continue;
         }
-        ESP_LOGI(TAG,"MON-UDP[%d]: listening on :%d", (ctx==&g_ctx[1])?2:1, ctx->mon.ip.port);
+        ESP_LOGI(TAG,"MON-UDP[%d]: listening on %s:%d",
+                 (ctx==&g_ctx[1])?2:1, inet_ntoa(*(struct in_addr*)&bindaddr.sin_addr.s_addr), ctx->mon.ip.port);
         ctx->mon_udp.udp_peer_cnt = 0;
         for(;;){
             uint8_t buf[1500];
@@ -315,15 +353,20 @@ static void mon_udp_server_task(void *pv){
 static void mon_tcp_server_task(void *pv){
     rt_ctx_t *ctx=(rt_ctx_t*)pv;
     for(;;){
+        if (!wait_ip_ready(ctx->mon.ifc, 500)) continue;
+
         int s = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
         if (s<0){ vTaskDelay(pdMS_TO_TICKS(500)); continue; }
         ctx->mon_tcp.listen_fd = s;
+
         int yes=1; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(yes));
         struct sockaddr_in a={0};
         a.sin_family=AF_INET; a.sin_port=htons(ctx->mon.ip.port);
-        a.sin_addr.s_addr = htonl(INADDR_ANY);
+        a.sin_addr.s_addr = ip_of_if(ctx->mon.ifc);
+
         if (bind(s,(struct sockaddr*)&a,sizeof(a)) < 0) {
-            ESP_LOGE(TAG,"MON-TCP: bind(:%d) failed, err=%d", ctx->mon.ip.port, errno);
+            ESP_LOGE(TAG,"MON-TCP: bind(%s:%d) failed, err=%d",
+                     inet_ntoa(*(struct in_addr*)&a.sin_addr.s_addr), ctx->mon.ip.port, errno);
             close(s); ctx->mon_tcp.listen_fd = -1;
             vTaskDelay(pdMS_TO_TICKS(500));
             continue;
@@ -335,7 +378,8 @@ static void mon_tcp_server_task(void *pv){
             continue;
         }
         for(int i=0;i<MAX_MON_TCP_CLIENTS;i++) ctx->mon_tcp.clients[i]=-1;
-        ESP_LOGI(TAG,"MON-TCP[%d]: listening on :%d", (ctx==&g_ctx[1])?2:1, ctx->mon.ip.port);
+        ESP_LOGI(TAG,"MON-TCP[%d]: listening on %s:%d",
+                 (ctx==&g_ctx[1])?2:1, inet_ntoa(*(struct in_addr*)&a.sin_addr.s_addr), ctx->mon.ip.port);
         for(;;){
             struct sockaddr_in ca; socklen_t cl=sizeof(ca);
             int c = accept(s,(struct sockaddr*)&ca,&cl);
@@ -356,8 +400,17 @@ static void gate_tcp_client_task(void *pv){
     rt_ctx_t *ctx=(rt_ctx_t*)pv;
     ctx->gate_ip_cli.sock = -1;
     for(;;){
+        if (!wait_ip_ready(ctx->gate.ifc, 500)) continue;
+
         int s = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
         if (s<0){ vTaskDelay(pdMS_TO_TICKS(1000)); continue; }
+
+        if (!bind_local_to_if(s, ctx->gate.ifc)){
+            close(s);
+            vTaskDelay(pdMS_TO_TICKS(500));
+            continue;
+        }
+
         struct sockaddr_in to={0}; to.sin_family=AF_INET;
         to.sin_port=htons(ctx->gate.ip.port);
         to.sin_addr.s_addr=inet_addr(ctx->gate.ip.addr);
@@ -387,15 +440,20 @@ static void gate_tcp_client_task(void *pv){
 static void gate_tcp_server_task(void *pv){
     rt_ctx_t *ctx=(rt_ctx_t*)pv;
     for(;;){
+        if (!wait_ip_ready(ctx->gate.ifc, 500)) continue;
+
         int s = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
         if (s<0){ vTaskDelay(pdMS_TO_TICKS(500)); continue; }
         ctx->gate_ip_srv.listen_fd = s;
+
         int yes=1; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(yes));
         struct sockaddr_in a={0};
         a.sin_family=AF_INET; a.sin_port=htons(ctx->gate.ip.port);
-        a.sin_addr.s_addr = htonl(INADDR_ANY);
+        a.sin_addr.s_addr = ip_of_if(ctx->gate.ifc);
+
         if (bind(s,(struct sockaddr*)&a,sizeof(a)) < 0) {
-            ESP_LOGE(TAG,"GATE TCP-SRV: bind(:%d) failed, err=%d", ctx->gate.ip.port, errno);
+            ESP_LOGE(TAG,"GATE TCP-SRV: bind(%s:%d) failed, err=%d",
+                     inet_ntoa(*(struct in_addr*)&a.sin_addr.s_addr), ctx->gate.ip.port, errno);
             close(s); ctx->gate_ip_srv.listen_fd = -1;
             vTaskDelay(pdMS_TO_TICKS(500));
             continue;
@@ -406,12 +464,15 @@ static void gate_tcp_server_task(void *pv){
             vTaskDelay(pdMS_TO_TICKS(500));
             continue;
         }
-        ESP_LOGI(TAG,"GATE TCP-Server: listening :%d", ctx->gate.ip.port);
+        ESP_LOGI(TAG,"GATE TCP-Server: listening %s:%d",
+                 inet_ntoa(*(struct in_addr*)&a.sin_addr.s_addr), ctx->gate.ip.port);
         for(;;){
             struct sockaddr_in ca; socklen_t cl=sizeof(ca);
             int c = accept(s,(struct sockaddr*)&ca,&cl);
             if (c<0){ vTaskDelay(pdMS_TO_TICKS(10)); continue; }
             ctx->gate_ip_srv.client_fd = c;
+            ESP_LOGI(TAG, "GATE TCP-Server: client connected from %s:%d",
+                     inet_ntoa(ca.sin_addr), ntohs(ca.sin_port));
             uint8_t buf[1024];
             for(;;){
                 ssize_t n = recv(c,buf,sizeof(buf),0);
@@ -426,19 +487,30 @@ static void gate_tcp_server_task(void *pv){
 
 static void gate_udp_client_task(void *pv){
     rt_ctx_t *ctx=(rt_ctx_t*)pv;
-    int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
-    if (s<0){ vTaskDelete(NULL); return; }
-    ctx->gate_ip_cli.sock = s;
-    struct timeval tv={.tv_sec=0,.tv_usec=0}; setsockopt(s,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv));
     for(;;){
-        uint8_t buf[1500];
-        struct sockaddr_in from; socklen_t fl=sizeof(from);
-        ssize_t n = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr*)&from, &fl);
-        if (n>0){
-            gate_send_uart((&g_ctx[0]==ctx)?1:2, buf, n);
-            mon_tee_matching(ctx, buf, n);
-        }else{
-            vTaskDelay(pdMS_TO_TICKS(5));
+        if (!wait_ip_ready(ctx->gate.ifc, 500)) continue;
+
+        int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+        if (s<0){ vTaskDelay(pdMS_TO_TICKS(500)); continue; }
+
+        if (!bind_local_to_if(s, ctx->gate.ifc)){
+            close(s);
+            vTaskDelay(pdMS_TO_TICKS(500));
+            continue;
+        }
+
+        ctx->gate_ip_cli.sock = s;
+        struct timeval tv={.tv_sec=0,.tv_usec=0}; setsockopt(s,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv));
+        for(;;){
+            uint8_t buf[1500];
+            struct sockaddr_in from; socklen_t fl=sizeof(from);
+            ssize_t n = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr*)&from, &fl);
+            if (n>0){
+                gate_send_uart((&g_ctx[0]==ctx)?1:2, buf, n);
+                mon_tee_matching(ctx, buf, n);
+            }else{
+                vTaskDelay(pdMS_TO_TICKS(5));
+            }
         }
     }
 }
@@ -446,21 +518,27 @@ static void gate_udp_client_task(void *pv){
 static void gate_udp_server_task(void *pv){
     rt_ctx_t *ctx = (rt_ctx_t*)pv;
     for(;;){
+        if (!wait_ip_ready(ctx->gate.ifc, 500)) continue;
+
         ctx->gate_udp.udp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
         int s = ctx->gate_udp.udp_sock;
         if (s<0){ vTaskDelay(pdMS_TO_TICKS(500)); continue; }
         int yes=1; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(yes));
+
         struct sockaddr_in bindaddr={0};
         bindaddr.sin_family=AF_INET;
         bindaddr.sin_port=htons(ctx->gate.ip.port);
-        bindaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+        bindaddr.sin_addr.s_addr = ip_of_if(ctx->gate.ifc);
+
         if (bind(s,(struct sockaddr*)&bindaddr,sizeof(bindaddr)) < 0){
-            ESP_LOGE(TAG,"GATE-UDP: bind(:%d) failed, err=%d", ctx->gate.ip.port, errno);
+            ESP_LOGE(TAG,"GATE-UDP: bind(%s:%d) failed, err=%d",
+                     inet_ntoa(*(struct in_addr*)&bindaddr.sin_addr.s_addr), ctx->gate.ip.port, errno);
             close(s); ctx->gate_udp.udp_sock = -1;
             vTaskDelay(pdMS_TO_TICKS(500));
             continue;
         }
-        ESP_LOGI(TAG,"GATE UDP-Server: listening :%d", ctx->gate.ip.port);
+        ESP_LOGI(TAG,"GATE UDP-Server: listening %s:%d",
+                 inet_ntoa(*(struct in_addr*)&bindaddr.sin_addr.s_addr), ctx->gate.ip.port);
         ctx->gate_udp.udp_peer_cnt = 0;
         for(;;){
             uint8_t buf[1500];
@@ -485,7 +563,7 @@ static void gate_udp_server_task(void *pv){
 }
 
 static void start_for_one(rt_ctx_t *ctx){
-    if ((ctx->gate.ifc==IF_LAN || ctx->gate.ifc==IF_AP || ctx->gate.ifc==IF_STA) && ctx->gate.ip.tp!=TP_NONE){
+    if (is_ip_interface(ctx->gate.ifc) && ctx->gate.ip.tp!=TP_NONE){
         if (ctx->gate.ip.tp==TP_TCP){
             if (ctx->gate.ip.is_client){
                 xTaskCreate(gate_tcp_client_task, "gate_tcp_cli", 4096, ctx, 8, NULL);
@@ -505,7 +583,7 @@ static void start_for_one(rt_ctx_t *ctx){
         esp_mqtt_client_handle_t cli = get_mqtt_client_handle();
         if (cli) esp_mqtt_client_subscribe(cli, ctx->gate.rx_topic, 1);
     }
-    if ((ctx->mon.ifc==IF_LAN || ctx->mon.ifc==IF_AP || ctx->mon.ifc==IF_STA)) {
+    if (is_ip_interface(ctx->mon.ifc)) {
         rt_ctx_t *other = (ctx == &g_ctx[0]) ? &g_ctx[1] : &g_ctx[0];
         if (ctx->mon.ip.tp==TP_UDP && !ctx->mon.ip.is_client) {
             bool duplicate = mon_cfg_equal(ctx, other) && other->mon_udp.udp_sock >= 0;

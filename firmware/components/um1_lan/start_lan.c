@@ -68,6 +68,7 @@ void start_lan(void)
     if (eth_port_cnt == 1) {
         esp_netif_config_t cfg = ESP_NETIF_DEFAULT_ETH();
         esp_netif_t *eth_netif = esp_netif_new(&cfg);
+        router_set_netif_lan(eth_netif);
 
         if (use_static_ip) {
             ESP_ERROR_CHECK(esp_netif_dhcpc_stop(eth_netif));

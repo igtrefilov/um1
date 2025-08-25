@@ -240,6 +240,7 @@ esp_err_t start_wifi(void)
 
     if (do_ap) {
         wifi_ap_netif = esp_netif_create_default_wifi_ap();
+        router_set_netif_ap(wifi_ap_netif);
         apply_ap_netif_ip_config(&global_wifi_config.ap);
         ESP_ERROR_CHECK_WITHOUT_ABORT(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler_ap, NULL, NULL));
 
@@ -252,6 +253,7 @@ esp_err_t start_wifi(void)
 
     if (do_sta) {
         wifi_sta_netif = esp_netif_create_default_wifi_sta();
+        router_set_netif_sta(wifi_sta_netif);
         apply_sta_netif_ip_config(&global_wifi_config.sta);
         ESP_ERROR_CHECK_WITHOUT_ABORT(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler_sta, NULL, NULL));
         ESP_ERROR_CHECK_WITHOUT_ABORT(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler_sta, NULL, NULL));

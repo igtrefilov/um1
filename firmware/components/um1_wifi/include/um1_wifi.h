@@ -16,6 +16,7 @@
 #include "lwip/sys.h"
 
 #include "um1_config.h"
+#include "um1_router.h"
 
 esp_err_t start_wifi(void);
 
