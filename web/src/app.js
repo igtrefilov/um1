@@ -12,6 +12,54 @@
     }
     return res;
   };
+
+  // ------- THEME -------
+  const THEME_KEY = 'um1_theme';
+
+  function currentTheme(){
+    if (document.documentElement.classList.contains('theme-light')) return 'light';
+    return 'dark';
+  }
+  function applyTheme(theme){
+    const root = document.documentElement;
+    root.classList.toggle('theme-light', theme === 'light');
+    root.classList.toggle('theme-dark', theme !== 'light');
+  }
+  function loadTheme(){
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved) { applyTheme(saved); return saved; }
+    return currentTheme();
+  }
+  function toggleTheme(){
+    const next = currentTheme() === 'light' ? 'dark' : 'light';
+    localStorage.setItem(THEME_KEY, next);
+    applyTheme(next);
+    updateThemeButton(next);
+  }
+  function ensureThemeButton(){
+    const header = document.querySelector('header');
+    if(!header) return;
+
+    let btn = document.getElementById('theme_toggle_btn');
+    if(!btn){
+      btn = document.createElement('button');
+      btn.id = 'theme_toggle_btn';
+      btn.className = 'icon-btn theme-toggle';
+      btn.type = 'button';
+      btn.setAttribute('aria-label', 'Переключить тему');
+      btn.addEventListener('click', toggleTheme);
+      header.insertBefore(btn, header.firstChild);
+    }
+    updateThemeButton(currentTheme());
+  }
+  function updateThemeButton(theme){
+    const btn = document.getElementById('theme_toggle_btn');
+    if(!btn) return;
+    btn.setAttribute('data-icon', theme === 'light' ? 'sun' : 'moon');
+    btn.title = theme === 'light' ? 'Светлая тема (нажмите для тёмной)' : 'Тёмная тема (нажмите для светлой)';
+  }
+  // ------- end THEME -------
+
   window.notify = function(msg, type){
     const box = document.getElementById('notif');
     if(!box) return;
@@ -21,7 +69,11 @@
     box.scrollIntoView({behavior:'smooth', block:'center'});
     setTimeout(() => box.style.display = 'none', 4000);
   };
+
   document.addEventListener('DOMContentLoaded', () => {
+    loadTheme();
+    ensureThemeButton();
+
     const btn = document.getElementById('logout_btn');
     if(btn){
       btn.addEventListener('click', async (e) => {
@@ -35,3 +87,4 @@
     }
   });
 })();
+

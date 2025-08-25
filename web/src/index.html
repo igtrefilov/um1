@@ -1,4 +1,17 @@
 <!doctype html>
+
+<script>
+(function(){
+  try{
+    var t = localStorage.getItem('um1_theme');
+    if(!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches){ t='light'; }
+    if(!t) t='dark';
+    document.documentElement.classList.add(t === 'light' ? 'theme-light' : 'theme-dark');
+  }catch(e){}
+})();
+</script>
+<link rel="stylesheet" href="/style.css" />
+
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
