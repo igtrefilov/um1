@@ -1,43 +1,58 @@
 function showNotification(message, isError=false){
   const notif = document.getElementById('notif');
+  if(!notif) return;
   notif.textContent = message;
   notif.className = 'notification' + (isError ? ' error' : ' success');
   notif.style.display = 'block';
   notif.scrollIntoView({behavior:'smooth', block:'center'});
-  setTimeout(()=>notif.style.display='none',3000);
+  setTimeout(()=>{ if (notif) notif.style.display='none'; },3000);
 }
 
 function toggleLanFields() {
   const dhcpEnabled = document.getElementById('lan_dhcp').checked;
   ['lan_static_ip','lan_subnet','lan_gateway'].forEach(id => {
     const el = document.getElementById(id);
-    if(el) el.disabled = dhcpEnabled;
+    if(el) {
+      el.disabled = dhcpEnabled;
+      el.title = dhcpEnabled
+        ? 'Отключено: DHCP включён'
+        : el.title.replace('Отключено: DHCP включён','').trim();
+    }
   });
 }
 
 function toggleWifiFields() {
   const wifiEnabled = document.getElementById('wifi_enabled').checked;
-  ['wifi_mode'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) el.disabled = !wifiEnabled;
-  });
+  const mode = document.getElementById('wifi_mode');
+  if (mode) mode.disabled = !wifiEnabled;
+
   ['wifi_ap_section','wifi_sta_section'].forEach(id => {
     const section = document.getElementById(id);
-    if(section) section.querySelectorAll('input, select').forEach(el => el.disabled = !wifiEnabled);
+    if(section) {
+      section.querySelectorAll('input, select').forEach(el => el.disabled = !wifiEnabled);
+      section.title = wifiEnabled ? section.title : 'Отключено: Wi-Fi выключен';
+    }
   });
 }
 
 function toggleWifiModeFields() {
   const mode = document.getElementById('wifi_mode').value;
-  document.getElementById('wifi_ap_section').style.display = (mode === 'ap' || mode === 'apsta') ? 'block' : 'none';
-  document.getElementById('wifi_sta_section').style.display = (mode === 'sta' || mode === 'apsta') ? 'block' : 'none';
+  const ap = document.getElementById('wifi_ap_section');
+  const sta = document.getElementById('wifi_sta_section');
+  if (ap) ap.style.display  = (mode === 'ap' || mode === 'apsta') ? 'block' : 'none';
+  if (sta) sta.style.display = (mode === 'sta' || mode === 'apsta') ? 'block' : 'none';
 }
 
 function toggleDhcp(prefix) {
   const dhcp = document.getElementById(prefix + '_dhcp').checked;
   ['static_ip','subnet','gateway'].forEach(f => {
     const el = document.getElementById(prefix + '_' + f);
-    if(el) el.disabled = dhcp;
+    if(el) {
+      el.disabled = dhcp;
+      el.title = dhcp
+        ? 'Отключено: DHCP включён'
+        : el.title.replace('Отключено: DHCP включён','').trim();
+    }
   });
 }
 
@@ -51,9 +66,46 @@ function toggleAllFields(){
     const on = en ? en.checked : false;
     fieldIds.forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.disabled = !on;
+      if (el) {
+        el.disabled = !on;
+        el.title = !on ? 'Отключено: функция выключена' : el.title.replace('Отключено: функция выключена','').trim();
+      }
     });
   });
+}
+
+function toggleIpProfile(prefix){
+  const isClient  = document.getElementById(prefix + '_client').checked;
+  const addrInput = document.getElementById(prefix + '_address');
+  const addrLabel = document.getElementById(prefix + '_addr_label');
+  const portInput = document.getElementById(prefix + '_port');
+  const portLabel = document.getElementById(prefix + '_port_label');
+
+  if (!addrInput || !addrLabel || !portLabel || !portInput) return;
+
+  if (isClient){
+    // Client mode
+    addrInput.disabled = false;
+    addrInput.placeholder = 'например, 192.168.1.100';
+    addrInput.title = 'Адрес удалённого сервера (режим Клиент)';
+    addrLabel.textContent = 'IP сервера:';
+    addrLabel.title = 'Адрес удалённого сервера (для режима Клиент). В режиме Сервер не используется.';
+
+    portLabel.textContent = 'Порт:';
+    portLabel.title = 'Порт удалённого сервера (в режиме Клиент).';
+    portInput.title = 'Номер порта удалённого сервера (Client)';
+  } else {
+    // Server mode
+    addrInput.disabled = true;
+    addrInput.placeholder = 'не используется в режиме сервера';
+    addrInput.title = 'В режиме Сервер адрес не требуется';
+    addrLabel.textContent = 'IP сервера:';
+    addrLabel.title = 'В режиме Сервер адрес не используется.';
+
+    portLabel.textContent = 'Порт:';
+    portLabel.title = 'Локальный порт прослушивания (в режиме Сервер).';
+    portInput.title = 'Номер локального порта (Server)';
+  }
 }
 
 function collectSettings(){
@@ -134,23 +186,34 @@ function collectSettings(){
       }
     }
   };
-  fetch('/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(settings)})
-    .then(r=>{ if(r.ok) showNotification('✅ Настройки успешно сохранены'); else showNotification('❌ Ошибка сохранения',true); })
+
+  fetch('/config', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(settings)
+  })
+    .then(r=>{
+      if(r.ok) showNotification('✅ Настройки успешно сохранены');
+      else showNotification('❌ Ошибка сохранения',true);
+    })
     .catch(()=>showNotification('❌ Ошибка соединения с сервером',true));
 }
 
 async function loadConfigFromServer(){
   try{
-    const response=await fetch('/api/config');
+    const response=await fetch('/api/config', { cache: 'no-store' });
     const config=await response.json();
 
+    // LAN
     document.getElementById('lan_dhcp').checked = !!(config.lan?.dhcp);
     document.getElementById('lan_static_ip').value = config.lan?.static_ip ?? '';
     document.getElementById('lan_subnet').value = config.lan?.subnet ?? '';
     document.getElementById('lan_gateway').value = config.lan?.gateway ?? '';
 
+    // Wi-Fi
     document.getElementById('wifi_enabled').checked = !!(config.wifi?.enabled);
     document.getElementById('wifi_mode').value = config.wifi?.mode ?? 'ap';
+
     document.getElementById('wifi_ap_ssid').value = config.wifi?.ap?.ssid ?? '';
     document.getElementById('wifi_ap_password').value = config.wifi?.ap?.password ?? '';
     document.getElementById('wifi_ap_authmode').value = config.wifi?.ap?.authmode ?? 'open';
@@ -158,6 +221,7 @@ async function loadConfigFromServer(){
     document.getElementById('wifi_ap_static_ip').value = config.wifi?.ap?.static_ip ?? '';
     document.getElementById('wifi_ap_subnet').value = config.wifi?.ap?.subnet ?? '';
     document.getElementById('wifi_ap_gateway').value = config.wifi?.ap?.gateway ?? '';
+
     document.getElementById('wifi_sta_ssid').value = config.wifi?.sta?.ssid ?? '';
     document.getElementById('wifi_sta_password').value = config.wifi?.sta?.password ?? '';
     document.getElementById('wifi_sta_authmode').value = config.wifi?.sta?.authmode ?? 'open';
@@ -166,22 +230,27 @@ async function loadConfigFromServer(){
     document.getElementById('wifi_sta_subnet').value = config.wifi?.sta?.subnet ?? '';
     document.getElementById('wifi_sta_gateway').value = config.wifi?.sta?.gateway ?? '';
 
+    // UART
     document.getElementById('uart1_baudrate').value = config.uart1?.baudrate ?? '';
     document.getElementById('uart1_parity').value = config.uart1?.parity ?? 'none';
     document.getElementById('uart1_stop_bits').value = config.uart1?.stop_bits ?? '1';
+
     document.getElementById('uart2_baudrate').value = config.uart2?.baudrate ?? '';
     document.getElementById('uart2_parity').value = config.uart2?.parity ?? 'none';
     document.getElementById('uart2_stop_bits').value = config.uart2?.stop_bits ?? '1';
 
+    // MQTT (broker)
     document.getElementById('mqtt_enabled').checked = !!(config.mqtt?.enabled);
     document.getElementById('mqtt_broker').value = config.mqtt?.broker ?? '';
     document.getElementById('mqtt_username').value = config.mqtt?.username ?? '';
     document.getElementById('mqtt_password').value = config.mqtt?.password ?? '';
 
+    // SNTP
     document.getElementById('sntp_enabled').checked = !!(config.sntp?.enabled);
     document.getElementById('sntp_server_ip').value = config.sntp?.server_ip ?? '';
     document.getElementById('sntp_interval').value = config.sntp?.sync_interval_sec ?? '';
 
+    // IP profile
     document.getElementById('ip1_client').checked = !!(config.ip_profile?.ip1?.client);
     document.getElementById('ip1_address').value = (config.ip_profile?.ip1?.ip ?? config.ip_profile?.ip1?.address ?? '');
     document.getElementById('ip1_port').value = config.ip_profile?.ip1?.port ?? '';
@@ -192,6 +261,7 @@ async function loadConfigFromServer(){
     document.getElementById('ip2_port').value = config.ip_profile?.ip2?.port ?? '';
     document.getElementById('ip2_transport').value = config.ip_profile?.ip2?.transport ?? 'TCP';
 
+    // MQTT profiles
     document.getElementById('mqtt1_pub_topic').value = config.mqtt_profile?.mqtt1?.tx_topic ?? '';
     document.getElementById('mqtt1_sub_topic').value = config.mqtt_profile?.mqtt1?.rx_topic ?? '';
     document.getElementById('mqtt2_pub_topic').value = config.mqtt_profile?.mqtt2?.tx_topic ?? '';
@@ -203,34 +273,29 @@ async function loadConfigFromServer(){
     toggleDhcp('wifi_ap');
     toggleDhcp('wifi_sta');
     toggleAllFields();
+    toggleIpProfile('ip1');
+    toggleIpProfile('ip2');
   }catch(err){
     showNotification('❌ Ошибка загрузки настроек', true);
   }
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
-  ['mqtt_enabled','sntp_enabled'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.addEventListener('change', toggleAllFields);
+  const map = [
+    { id:'lan_dhcp', fn: () => toggleLanFields() },
+    { id:'wifi_enabled', fn: () => toggleWifiFields() },
+    { id:'wifi_mode', fn: () => toggleWifiModeFields() },
+    { id:'wifi_ap_dhcp', fn: () => toggleDhcp('wifi_ap') },
+    { id:'wifi_sta_dhcp', fn: () => toggleDhcp('wifi_sta') },
+    { id:'mqtt_enabled', fn: () => toggleAllFields() },
+    { id:'sntp_enabled', fn: () => toggleAllFields() },
+    { id:'ip1_client', fn: () => toggleIpProfile('ip1') },
+    { id:'ip2_client', fn: () => toggleIpProfile('ip2') },
+  ];
+  map.forEach(({id, fn}) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', fn);
   });
-  const lanDhcp=document.getElementById('lan_dhcp');
-  if(lanDhcp) lanDhcp.addEventListener('change', toggleLanFields);
-  const wifiEnabled=document.getElementById('wifi_enabled');
-  if(wifiEnabled) wifiEnabled.addEventListener('change', toggleWifiFields);
-  const wifiMode=document.getElementById('wifi_mode');
-  if(wifiMode) wifiMode.addEventListener('change', toggleWifiModeFields);
-  const wifiApDhcp=document.getElementById('wifi_ap_dhcp');
-  if(wifiApDhcp) wifiApDhcp.addEventListener('change', () => toggleDhcp('wifi_ap'));
-  const wifiStaDhcp=document.getElementById('wifi_sta_dhcp');
-  if(wifiStaDhcp) wifiStaDhcp.addEventListener('change', () => toggleDhcp('wifi_sta'));
-
-  toggleLanFields();
-  toggleWifiFields();
-  toggleWifiModeFields();
-  toggleDhcp('wifi_ap');
-  toggleDhcp('wifi_sta');
-  toggleAllFields();
-  loadConfigFromServer();
 
   const btn = document.getElementById('change_creds_btn');
   if(btn){
@@ -241,7 +306,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       const conf = document.getElementById('confirm_password').value.trim();
 
       if(!newu && !newp){
-        showNotification('❌ Нет новых данных', true);
+        showNotification('❌ Нет новых данных для изменения', true);
         return;
       }
       if(newp && newp !== conf){
@@ -258,7 +323,8 @@ document.addEventListener('DOMContentLoaded',()=>{
           method:'POST',
           headers:{'Content-Type':'application/x-www-form-urlencoded'},
           body: body.toString(),
-          credentials:'include'
+          credentials:'include',
+          cache: 'no-store'
         });
         if(r.ok) showNotification('✅ Данные обновлены');
         else showNotification('❌ Не удалось обновить данные', true);
@@ -267,5 +333,16 @@ document.addEventListener('DOMContentLoaded',()=>{
       }
     });
   }
+
+  toggleLanFields();
+  toggleWifiFields();
+  toggleWifiModeFields();
+  toggleDhcp('wifi_ap');
+  toggleDhcp('wifi_sta');
+  toggleAllFields();
+  toggleIpProfile('ip1');
+  toggleIpProfile('ip2');
+
+  loadConfigFromServer();
 });
 

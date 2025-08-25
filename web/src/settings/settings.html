@@ -8,145 +8,370 @@
 </head>
 <body>
   <header>
-    <h1>УМ1</h1>
+    <h1 title="Управление устройством УМ1: сеть, Wi-Fi, UART, MQTT, SNTP, маршрутизация и доступ">УМ1</h1>
     <nav>
-      <a href="/gateway/gateway.html">Шлюз и мониторинг</a>
-      <a href="/settings/settings.html" class="active">Настройки</a>
-      <a href="/update/update.html">Обновление</a>
-      <a href="/diag/diag.html">Диагностика</a>
-      <a href="/about/about.html">О системе</a>
-      <a href="#" id="logout_btn">Выход</a>
+      <a href="/gateway/gateway.html" title="Шлюзование и мониторинг данных в реальном времени">Шлюз и мониторинг</a>
+      <a href="/settings/settings.html" class="active" title="Текущие настройки устройства">Настройки</a>
+      <a href="/update/update.html" title="Обновление прошивки/веб-части">Обновление</a>
+      <a href="/diag/diag.html" title="Диагностика состояния и журналов">Диагностика</a>
+      <a href="/about/about.html" title="Информация о версии и устройстве">О системе</a>
+      <a href="#" id="logout_btn" title="Выйти из веб-интерфейса">Выход</a>
     </nav>
   </header>
+
   <div class="container">
-    <div id="notif" class="notification"></div>
+    <div id="notif" class="notification" title="Системные сообщения об успешных действиях и ошибках" aria-live="polite"></div>
+
+    <!-- LAN -->
     <div class="card">
-      <h3>LAN</h3>
+      <h3 title="Настройка проводного интерфейса Ethernet (LAN). При включённом DHCP адрес берётся автоматически; иначе задайте статические параметры.">LAN</h3>
       <table class="settings-table">
-        <tr><td>DHCP:</td><td><input type="checkbox" id="lan_dhcp" /></td></tr>
-        <tr><td>Static IP:</td><td><input type="text" id="lan_static_ip" /></td></tr>
-        <tr><td>Subnet:</td><td><input type="text" id="lan_subnet" /></td></tr>
-        <tr><td>Gateway:</td><td><input type="text" id="lan_gateway" /></td></tr>
+        <tr>
+          <td title="Если включено — IP-адрес будет получен автоматически от DHCP-сервера (роутера).">DHCP:</td>
+          <td><input type="checkbox" id="lan_dhcp" title="Включить автоматическое получение IP по DHCP" /></td>
+        </tr>
+        <tr>
+          <td title="Статический IP-адрес устройства (используется, если DHCP выключен).">Static IP:</td>
+          <td><input type="text" id="lan_static_ip" placeholder="192.168.1.50" title="Введите статический IP устройства (пример: 192.168.1.50)" /></td>
+        </tr>
+        <tr>
+          <td title="Маска подсети — определяет диапазон вашей сети.">Subnet:</td>
+          <td><input type="text" id="lan_subnet" placeholder="255.255.255.0" title="Маска подсети (пример: 255.255.255.0)" /></td>
+        </tr>
+        <tr>
+          <td title="Шлюз по умолчанию — обычно IP вашего роутера.">Gateway:</td>
+          <td><input type="text" id="lan_gateway" placeholder="192.168.1.1" title="IP шлюза/роутера (пример: 192.168.1.1)" /></td>
+        </tr>
       </table>
     </div>
+
+    <!-- Wi-Fi -->
     <div class="card">
-      <h3>Wi‑Fi</h3>
+      <h3 title="Беспроводной интерфейс. Режим AP — устройство раздаёт Wi-Fi; STA — подключается к роутеру; AP+STA — одновременно.">Wi-Fi</h3>
       <table class="settings-table">
-        <tr><td>Включено:</td><td><input type="checkbox" id="wifi_enabled" /></td></tr>
-        <tr><td>Режим:</td><td><select id="wifi_mode"><option value="ap">AP</option><option value="sta">STA</option><option value="apsta">AP+STA</option></select></td></tr>
+        <tr>
+          <td title="Включить/выключить радиомодуль Wi-Fi.">Включено:</td>
+          <td><input type="checkbox" id="wifi_enabled" title="Включить Wi-Fi" /></td>
+        </tr>
+        <tr>
+          <td title="Выберите роль Wi-Fi интерфейса.">Режим:</td>
+          <td>
+            <select id="wifi_mode" title="AP — точка доступа; STA — клиент; AP+STA — оба режима">
+              <option value="ap">AP</option>
+              <option value="sta">STA</option>
+              <option value="apsta">AP+STA</option>
+            </select>
+          </td>
+        </tr>
       </table>
+
       <div id="wifi_ap_section">
-        <h4>AP</h4>
+        <h4 title="Параметры точки доступа (AP): устройство создаёт свою Wi-Fi сеть.">AP</h4>
         <table class="settings-table">
-          <tr><td>SSID:</td><td><input type="text" id="wifi_ap_ssid" /></td></tr>
-          <tr><td>Password:</td><td><input type="password" id="wifi_ap_password" /></td></tr>
-          <tr><td>Auth Mode:</td><td><select id="wifi_ap_authmode"><option value="open">Open</option><option value="wpa2">WPA2-PSK</option><option value="wpa3">WPA3-SAE</option><option value="wpa_wpa2">WPA/WPA2 Mixed</option></select></td></tr>
-          <tr><td>DHCP:</td><td><input type="checkbox" id="wifi_ap_dhcp" /></td></tr>
-          <tr><td>Static IP:</td><td><input type="text" id="wifi_ap_static_ip" /></td></tr>
-          <tr><td>Subnet:</td><td><input type="text" id="wifi_ap_subnet" /></td></tr>
-          <tr><td>Gateway:</td><td><input type="text" id="wifi_ap_gateway" /></td></tr>
+          <tr>
+            <td title="Имя Wi-Fi сети (до 32 символов).">SSID:</td>
+            <td><input type="text" id="wifi_ap_ssid" placeholder="UM1_AP" title="Имя сети AP" /></td>
+          </tr>
+          <tr>
+            <td title="Пароль Wi-Fi (8–63 символов) — обязателен для защищённых режимов.">Password:</td>
+            <td><input type="password" id="wifi_ap_password" placeholder="********" title="Пароль сети AP (если режим не Open)" /></td>
+          </tr>
+          <tr>
+            <td title="Способ шифрования сети.">Auth Mode:</td>
+            <td>
+              <select id="wifi_ap_authmode" title="Open — без пароля; WPA2-PSK; WPA3-SAE; WPA/WPA2 Mixed">
+                <option value="open">Open</option>
+                <option value="wpa2">WPA2-PSK</option>
+                <option value="wpa3">WPA3-SAE</option>
+                <option value="wpa_wpa2">WPA/WPA2 Mixed</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td title="Если включено — DHCP сервер AP назначит клиентам IP-адреса.">DHCP:</td>
+            <td><input type="checkbox" id="wifi_ap_dhcp" title="Включить DHCP сервер в AP" /></td>
+          </tr>
+          <tr>
+            <td title="Статический IP самого AP.">Static IP:</td>
+            <td><input type="text" id="wifi_ap_static_ip" placeholder="192.168.4.1" title="IP адрес AP (пример: 192.168.4.1)" /></td>
+          </tr>
+          <tr>
+            <td title="Маска подсети AP.">Subnet:</td>
+            <td><input type="text" id="wifi_ap_subnet" placeholder="255.255.255.0" title="Маска подсети AP (пример: 255.255.255.0)" /></td>
+          </tr>
+          <tr>
+            <td title="Шлюз по умолчанию для клиентов AP.">Gateway:</td>
+            <td><input type="text" id="wifi_ap_gateway" placeholder="192.168.4.1" title="Шлюз для сети AP (обычно совпадает с IP AP)" /></td>
+          </tr>
         </table>
       </div>
+
       <div id="wifi_sta_section">
-        <h4>STA</h4>
+        <h4 title="Параметры клиента (STA): устройство подключается к существующей Wi-Fi сети.">STA</h4>
         <table class="settings-table">
-          <tr><td>SSID:</td><td><input type="text" id="wifi_sta_ssid" /></td></tr>
-          <tr><td>Password:</td><td><input type="password" id="wifi_sta_password" /></td></tr>
-          <tr><td>Auth Mode:</td><td><select id="wifi_sta_authmode"><option value="open">Open</option><option value="wpa2">WPA2-PSK</option><option value="wpa3">WPA3-SAE</option><option value="wpa_wpa2">WPA/WPA2 Mixed</option></select></td></tr>
-          <tr><td>DHCP:</td><td><input type="checkbox" id="wifi_sta_dhcp" /></td></tr>
-          <tr><td>Static IP:</td><td><input type="text" id="wifi_sta_static_ip" /></td></tr>
-          <tr><td>Subnet:</td><td><input type="text" id="wifi_sta_subnet" /></td></tr>
-          <tr><td>Gateway:</td><td><input type="text" id="wifi_sta_gateway" /></td></tr>
+          <tr>
+            <td title="Имя существующей Wi-Fi сети, к которой подключаться.">SSID:</td>
+            <td><input type="text" id="wifi_sta_ssid" placeholder="Your_WiFi" title="SSID внешней сети" /></td>
+          </tr>
+          <tr>
+            <td title="Пароль сети STA (если требуется).">Password:</td>
+            <td><input type="password" id="wifi_sta_password" placeholder="********" title="Пароль внешней сети" /></td>
+          </tr>
+          <tr>
+            <td title="Способ шифрования внешней сети.">Auth Mode:</td>
+            <td>
+              <select id="wifi_sta_authmode" title="Open; WPA2-PSK; WPA3-SAE; WPA/WPA2 Mixed">
+                <option value="open">Open</option>
+                <option value="wpa2">WPA2-PSK</option>
+                <option value="wpa3">WPA3-SAE</option>
+                <option value="wpa_wpa2">WPA/WPA2 Mixed</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td title="Если включено — адрес будет получен от роутера по DHCP.">DHCP:</td>
+            <td><input type="checkbox" id="wifi_sta_dhcp" title="Включить DHCP клиент в STA" /></td>
+          </tr>
+          <tr>
+            <td title="Статический IP для интерфейса STA (если DHCP выключен).">Static IP:</td>
+            <td><input type="text" id="wifi_sta_static_ip" placeholder="192.168.1.50" title="Статический IP STA" /></td>
+          </tr>
+          <tr>
+            <td title="Маска подсети для STA.">Subnet:</td>
+            <td><input type="text" id="wifi_sta_subnet" placeholder="255.255.255.0" title="Маска подсети STA" /></td>
+          </tr>
+          <tr>
+            <td title="Шлюз по умолчанию для STA.">Gateway:</td>
+            <td><input type="text" id="wifi_sta_gateway" placeholder="192.168.1.1" title="Шлюз STA (IP роутера)" /></td>
+          </tr>
         </table>
       </div>
     </div>
+
+    <!-- UART1 -->
     <div class="card">
-      <h3>UART 1</h3>
+      <h3 title="Последовательный интерфейс UART1 (обычно RS-485/RS-232).">UART 1</h3>
       <table class="settings-table">
-        <tr><td>Baudrate:</td><td><input type="number" id="uart1_baudrate" /></td></tr>
-        <tr><td>Parity:</td><td><select id="uart1_parity"><option value="none">None</option><option value="even">Even</option><option value="odd">Odd</option></select></td></tr>
-        <tr><td>Stop Bits:</td><td><select id="uart1_stop_bits"><option value="1">1</option><option value="2">2</option></select></td></tr>
+        <tr>
+          <td title="Скорость передачи данных, бод (бит/с).">Baudrate:</td>
+          <td><input type="number" id="uart1_baudrate" placeholder="9600" title="Скорость UART1 (пример: 9600, 19200, 115200)" /></td>
+        </tr>
+        <tr>
+          <td title="Чётность: None (нет), Even (чётная), Odd (нечётная).">Parity:</td>
+          <td>
+            <select id="uart1_parity" title="Чётность UART1">
+              <option value="none">None</option>
+              <option value="even">Even</option>
+              <option value="odd">Odd</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td title="Количество стоп-битов (1 или 2).">Stop Bits:</td>
+          <td>
+            <select id="uart1_stop_bits" title="Стоп-биты UART1">
+              <option value="1">1</option>
+              <option value="2">2</option>
+            </select>
+          </td>
+        </tr>
       </table>
     </div>
+
+    <!-- UART2 -->
     <div class="card">
-      <h3>UART 2</h3>
+      <h3 title="Последовательный интерфейс UART2 (обычно RS-485/RS-232).">UART 2</h3>
       <table class="settings-table">
-        <tr><td>Baudrate:</td><td><input type="number" id="uart2_baudrate" /></td></tr>
-        <tr><td>Parity:</td><td><select id="uart2_parity"><option value="none">None</option><option value="even">Even</option><option value="odd">Odd</option></select></td></tr>
-        <tr><td>Stop Bits:</td><td><select id="uart2_stop_bits"><option value="1">1</option><option value="2">2</option></select></td></tr>
+        <tr>
+          <td title="Скорость передачи данных, бод (бит/с).">Baudrate:</td>
+          <td><input type="number" id="uart2_baudrate" placeholder="9600" title="Скорость UART2" /></td>
+        </tr>
+        <tr>
+          <td title="Чётность: None (нет), Even (чётная), Odd (нечётная).">Parity:</td>
+          <td>
+            <select id="uart2_parity" title="Чётность UART2">
+              <option value="none">None</option>
+              <option value="even">Even</option>
+              <option value="odd">Odd</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td title="Количество стоп-битов (1 или 2).">Stop Bits:</td>
+          <td>
+            <select id="uart2_stop_bits" title="Стоп-биты UART2">
+              <option value="1">1</option>
+              <option value="2">2</option>
+            </select>
+          </td>
+        </tr>
       </table>
     </div>
+
+    <!-- MQTT (broker) -->
     <div class="card">
-      <h3>MQTT</h3>
+      <h3 title="Подключение к MQTT-брокеру (серверу). Здесь задаются адрес брокера и учётные данные. Топики — в профилях MQTT_1/2 ниже.">MQTT</h3>
       <table class="settings-table">
-        <tr><td>Enabled:</td><td><input type="checkbox" id="mqtt_enabled" /></td></tr>
-        <tr><td>Broker URL:</td><td><input type="text" id="mqtt_broker" /></td></tr>
-        <tr><td>Username:</td><td><input type="text" id="mqtt_username" /></td></tr>
-        <tr><td>Password:</td><td><input type="password" id="mqtt_password" /></td></tr>
+        <tr>
+          <td title="Включить/выключить подключение к брокеру.">Enabled:</td>
+          <td><input type="checkbox" id="mqtt_enabled" title="Активировать MQTT-подключение" /></td>
+        </tr>
+        <tr>
+          <td title="Адрес брокера MQTT.">Broker URL:</td>
+          <td><input type="text" id="mqtt_broker" placeholder="mqtt://192.168.1.10:1883" title="Адрес брокера (mqtt://host:1883 или mqtts://host:8883)" /></td>
+        </tr>
+        <tr>
+          <td title="Имя пользователя для аутентификации на брокере.">Username:</td>
+          <td><input type="text" id="mqtt_username" placeholder="user" title="Логин MQTT (если требуется)" /></td>
+        </tr>
+        <tr>
+          <td title="Пароль для аутентификации на брокере.">Password:</td>
+          <td><input type="password" id="mqtt_password" placeholder="********" title="Пароль MQTT (если требуется)" /></td>
+        </tr>
       </table>
     </div>
+
+    <!-- SNTP -->
     <div class="card">
-      <h3>SNTP</h3>
+      <h3 title="Синхронизация часов устройства по SNTP (точные отметки времени в данных).">SNTP</h3>
       <table class="settings-table">
-        <tr><td>Enabled:</td><td><input type="checkbox" id="sntp_enabled" /></td></tr>
-        <tr><td>Server IP:</td><td><input type="text" id="sntp_server_ip" /></td></tr>
-        <tr><td>Sync Interval (sec):</td><td><input type="number" id="sntp_interval" /></td></tr>
+        <tr>
+          <td title="Включить периодическую синхронизацию времени.">Enabled:</td>
+          <td><input type="checkbox" id="sntp_enabled" title="Активировать SNTP" /></td>
+        </tr>
+        <tr>
+          <td title="Адрес SNTP-сервера (IP или домен).">Server IP:</td>
+          <td><input type="text" id="sntp_server_ip" placeholder="pool.ntp.org" title="Адрес SNTP сервера (например, pool.ntp.org)" /></td>
+        </tr>
+        <tr>
+          <td title="Интервал синхронизации в секундах.">Sync Interval (sec):</td>
+          <td><input type="number" id="sntp_interval" placeholder="3600" title="Период синхронизации, сек (например, 3600)" /></td>
+        </tr>
       </table>
     </div>
+
+    <!-- Credentials -->
     <div class="card">
-      <h3>Логин и пароль</h3>
+      <h3 title="Смена учётных данных для входа в веб-интерфейс.">Логин и пароль</h3>
       <div class="fld">
-        <label>Новый логин</label>
-        <input type="text" id="new_username" />
+        <label for="new_username" title="Если нужно сменить имя пользователя — укажите здесь.">Новый логин</label>
+        <input type="text" id="new_username" placeholder="admin" title="Новый логин" />
       </div>
       <div class="fld">
-        <label>Текущий пароль</label>
-        <input type="password" id="old_password" />
+        <label for="old_password" title="Для применения изменений нужен текущий пароль.">Текущий пароль</label>
+        <input type="password" id="old_password" placeholder="********" title="Текущий пароль" />
       </div>
       <div class="fld">
-        <label>Новый пароль</label>
-        <input type="password" id="new_password" />
+        <label for="new_password" title="Новый пароль для входа.">Новый пароль</label>
+        <input type="password" id="new_password" placeholder="********" title="Новый пароль" />
       </div>
       <div class="fld">
-        <label>Подтвердите пароль</label>
-        <input type="password" id="confirm_password" />
+        <label for="confirm_password" title="Повторите новый пароль без ошибок.">Подтвердите пароль</label>
+        <input type="password" id="confirm_password" placeholder="********" title="Подтверждение пароля" />
       </div>
-      <button id="change_creds_btn">Изменить</button>
+      <button id="change_creds_btn" title="Сохранить новые учётные данные">Изменить</button>
     </div>
+
+    <!-- IP profile -->
     <div class="card">
-      <h3>IP профиль</h3>
-      <h4>Подключение по IP 1 (IP_1):</h4>
+      <h3 title="Два независимых IP-профиля для шлюзования/мониторинга. Каждый может работать как Клиент (исходящее подключение) или как Сервер (ожидание входящих).">IP профиль</h3>
+
+      <h4 title="Первый профиль IP-подключения. Его можно выбрать в маршрутизации для UART1/2.">IP_1</h4>
       <table class="settings-table">
-        <tr><td>Клиент:</td><td><input type="checkbox" id="ip1_client" /></td></tr>
-        <tr><td>Адрес IP:</td><td><input type="text" id="ip1_address" /></td></tr>
-        <tr><td>Порт:</td><td><input type="number" id="ip1_port" /></td></tr>
-        <tr><td>Транспортный протокол:</td><td><select id="ip1_transport"><option value="TCP">TCP</option><option value="UDP">UDP</option></select></td></tr>
+        <tr>
+          <td title="Определяет поведение устройства в этом профиле.">Роль:</td>
+          <td>
+            <label title="Клиент — устройство само подключается к удалённому серверу; Сервер — устройство слушает на локальном порту.">
+              <input type="checkbox" id="ip1_client" title="Включить режим Клиент для IP_1" />
+              Клиент
+            </label>
+          </td>
+        </tr>
+        <tr>
+          <td id="ip1_addr_label" title="Адрес удалённого сервера (для режима Клиент). В режиме Сервер не используется.">IP сервера:</td>
+          <td><input type="text" id="ip1_address" placeholder="например, 192.168.1.100" title="Адрес сервера для IP_1 (Client)" /></td>
+        </tr>
+        <tr>
+          <td id="ip1_port_label" title="Порт удалённого сервера (Client) или локальный порт прослушивания (Server).">Порт:</td>
+          <td><input type="number" id="ip1_port" placeholder="например, 502" title="Номер порта для IP_1" /></td>
+        </tr>
+        <tr>
+          <td title="Транспорт передачи: TCP — надёжно; UDP — минимум накладных расходов.">Протокол:</td>
+          <td>
+            <select id="ip1_transport" title="TCP — соединение с контролем доставки; UDP — без установления соединения">
+              <option value="TCP">TCP</option>
+              <option value="UDP">UDP</option>
+            </select>
+          </td>
+        </tr>
       </table>
-      <h4>Подключение по IP 2 (IP_2):</h4>
+
+      <h4 title="Второй профиль IP-подключения. Можно использовать параллельно с IP_1.">IP_2</h4>
       <table class="settings-table">
-        <tr><td>Клиент:</td><td><input type="checkbox" id="ip2_client" /></td></tr>
-        <tr><td>Адрес IP:</td><td><input type="text" id="ip2_address" /></td></tr>
-        <tr><td>Порт:</td><td><input type="number" id="ip2_port" /></td></tr>
-        <tr><td>Транспортный протокол:</td><td><select id="ip2_transport"><option value="TCP">TCP</option><option value="UDP">UDP</option></select></td></tr>
+        <tr>
+          <td title="Определяет поведение устройства в этом профиле.">Роль:</td>
+          <td>
+            <label title="Клиент — устройство само подключается к удалённому серверу; Сервер — устройство слушает на локальном порту.">
+              <input type="checkbox" id="ip2_client" title="Включить режим Клиент для IP_2" />
+              Клиент
+            </label>
+          </td>
+        </tr>
+        <tr>
+          <td id="ip2_addr_label" title="Адрес удалённого сервера (для режима Клиент). В режиме Сервер не используется.">IP сервера:</td>
+          <td><input type="text" id="ip2_address" placeholder="например, 192.168.1.100" title="Адрес сервера для IP_2 (Client)" /></td>
+        </tr>
+        <tr>
+          <td id="ip2_port_label" title="Порт удалённого сервера (Client) или локальный порт прослушивания (Server).">Порт:</td>
+          <td><input type="number" id="ip2_port" placeholder="например, 502" title="Номер порта для IP_2" /></td>
+        </tr>
+        <tr>
+          <td title="Транспорт передачи: TCP — надёжно; UDP — минимум накладных расходов.">Протокол:</td>
+          <td>
+            <select id="ip2_transport" title="TCP — соединение с контролем доставки; UDP — без установления соединения">
+              <option value="TCP">TCP</option>
+              <option value="UDP">UDP</option>
+            </select>
+          </td>
+        </tr>
       </table>
     </div>
+
+    <!-- MQTT profile -->
     <div class="card">
-      <h3>MQTT профиль</h3>
-      <h4>Подключение к MQTT топику 1 (MQTT_1):</h4>
+      <h3 title="Профили топиков MQTT. Здесь задаются пары топиков для публикации и подписки, используемые в маршрутизации.">MQTT профиль</h3>
+
+      <h4 title="Первый профиль MQTT-топиков. Пара: публикация (исходящие) и подписка (входящие).">MQTT_1</h4>
       <table class="settings-table">
-        <tr><td>Топик для отправки данных (публикация):</td><td><input type="text" id="mqtt1_pub_topic" /></td></tr>
-        <tr><td>Топик для приема данных (подписка):</td><td><input type="text" id="mqtt1_sub_topic" /></td></tr>
+        <tr>
+          <td title="Топик, в который устройство публикует данные (исходящий поток).">Топик (публикация):</td>
+          <td><input type="text" id="mqtt1_pub_topic" placeholder="um1/data/tx" title="Исходящий MQTT-топик для публикации" /></td>
+        </tr>
+        <tr>
+          <td title="Топик, на который устройство подписывается, откуда получает данные (входящий поток).">Топик (подписка):</td>
+          <td><input type="text" id="mqtt1_sub_topic" placeholder="um1/data/rx" title="Входящий MQTT-топик для подписки" /></td>
+        </tr>
       </table>
-      <h4>Подключение к MQTT топику 2 (MQTT_2):</h4>
+
+      <h4 title="Второй профиль MQTT-топиков.">MQTT_2</h4>
       <table class="settings-table">
-        <tr><td>Топик для отправки данных (публикация):</td><td><input type="text" id="mqtt2_pub_topic" /></td></tr>
-        <tr><td>Топик для приема данных (подписка):</td><td><input type="text" id="mqtt2_sub_topic" /></td></tr>
+        <tr>
+          <td title="Топик, в который устройство публикует данные (исходящий поток).">Топик (публикация):</td>
+          <td><input type="text" id="mqtt2_pub_topic" placeholder="um1/data2/tx" title="Исходящий MQTT-топик для публикации" /></td>
+        </tr>
+        <tr>
+          <td title="Топик, на который устройство подписывается, откуда получает данные (входящий поток).">Топик (подписка):</td>
+          <td><input type="text" id="mqtt2_sub_topic" placeholder="um1/data2/rx" title="Входящий MQTT-топик для подписки" /></td>
+        </tr>
       </table>
     </div>
-    <button onclick="collectSettings()">Сохранить настройки</button>
-    <pre id="json_output"></pre>
+
+    <button onclick="collectSettings()" title="Сохранить все изменения настроек на устройстве">Сохранить настройки</button>
+    <pre id="json_output" title="Отладочный вывод — может показывать собранный JSON для отправки на устройство" style="white-space:pre-wrap;"></pre>
   </div>
+
   <script src="/app.js"></script>
   <script src="/settings/settings.js"></script>
 </body>
 </html>
+
