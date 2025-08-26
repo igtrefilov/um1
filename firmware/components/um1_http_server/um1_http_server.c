@@ -512,46 +512,90 @@ esp_err_t ws_control_handler(httpd_req_t *req) {
         return ESP_OK;
     }
 
-    httpd_ws_frame_t ws_pkt = {};
+    httpd_ws_frame_t ws_pkt = {0};
     esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
-    if (ret != ESP_OK || ws_pkt.len == 0) return ret;
+    if (ret != ESP_OK) return ret;
+    if (ws_pkt.len == 0) return ESP_OK;
 
-    uint8_t *buf = malloc(ws_pkt.len);
+    uint8_t *buf = (uint8_t *)malloc(ws_pkt.len + 1);
     if (!buf) return ESP_ERR_NO_MEM;
+
     ws_pkt.payload = buf;
     ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
     if (ret != ESP_OK) { free(buf); return ret; }
 
     if (ws_pkt.type == HTTPD_WS_TYPE_BINARY) {
         if (ws_pkt.len < 1) { free(buf); return ESP_OK; }
-        uint8_t mask = buf[0];
+
+        const uint8_t mask = buf[0];
         const uint8_t *data = buf + 1;
-        size_t dlen = ws_pkt.len - 1;
+        const size_t   dlen = ws_pkt.len - 1;
+
+        if ((mask & 0x3) == 0) { free(buf); return ESP_OK; }
+
+        const size_t hex_len = dlen * 2;
+        char *hex = (char *)malloc(hex_len + 1);
+        if (!hex) { free(buf); return ESP_ERR_NO_MEM; }
+        for (size_t i = 0; i < dlen; ++i) sprintf(&hex[i * 2], "%02X", data[i]);
+        hex[hex_len] = '\0';
+
         if (mask & 0x1) {
-            uart_write_bytes(UART_PORT_NUM_1, (const char*)data, dlen);
+            uart_write_bytes(UART_PORT_NUM_1, (const char *)data, dlen);
             uart_wait_tx_done(UART_PORT_NUM_1, portMAX_DELAY);
-            send_ws_log(UART_PORT_NUM_1, "[COMMAND] -> [UART1]");
+
+            char line[32 + hex_len];
+            int n = snprintf(line, sizeof(line), "[COMMAND] -> [UART1] %s", hex);
+            if (n > 0) {
+                const size_t pay_len = 4 + (size_t)n + 1;
+                uint8_t *pay = (uint8_t *)malloc(pay_len);
+                if (pay) {
+                    pay[0] = 0xFF; pay[1] = 'L'; pay[2] = 'O'; pay[3] = 'G';
+                    memcpy(pay + 4, line, (size_t)n + 1);
+                    send_uart_ws_data(UART_PORT_NUM_1, pay, pay_len);
+                    free(pay);
+                }
+            }
         }
+
         if (mask & 0x2) {
-            uart_write_bytes(UART_PORT_NUM_2, (const char*)data, dlen);
+            uart_write_bytes(UART_PORT_NUM_2, (const char *)data, dlen);
             uart_wait_tx_done(UART_PORT_NUM_2, portMAX_DELAY);
-            send_ws_log(UART_PORT_NUM_2, "[COMMAND] -> [UART2]");
+
+            char line[32 + hex_len];
+            int n = snprintf(line, sizeof(line), "[COMMAND] -> [UART2] %s", hex);
+            if (n > 0) {
+                const size_t pay_len = 4 + (size_t)n + 1;
+                uint8_t *pay = (uint8_t *)malloc(pay_len);
+                if (pay) {
+                    pay[0] = 0xFF; pay[1] = 'L'; pay[2] = 'O'; pay[3] = 'G';
+                    memcpy(pay + 4, line, (size_t)n + 1);
+                    send_uart_ws_data(UART_PORT_NUM_2, pay, pay_len);
+                    free(pay);
+                }
+            }
         }
+
+        free(hex);
         free(buf);
         return ESP_OK;
     }
 
-    buf[ws_pkt.len] = 0;
-    ESP_LOGI(TAG, "Received message: %s", buf);
+    buf[ws_pkt.len] = '\0';
     int fd = httpd_req_to_sockfd(req);
 
-    if (strcmp((char*)buf, "STOP_STREAM") == 0) {
+    if (strcmp((char *)buf, "STOP_STREAM") == 0) {
         remove_subscriber(fd);
         free(buf);
         return ESP_OK;
     }
 
-    cJSON *root = cJSON_Parse((char*)buf);
+    if (strcmp((char *)buf, "OTA_PROGRESS") == 0) {
+        ota_ws_fd = fd;
+        free(buf);
+        return ESP_OK;
+    }
+
+    cJSON *root = cJSON_Parse((char *)buf);
     if (root) {
         const cJSON *action = cJSON_GetObjectItem(root, "action");
         if (action && strcmp(action->valuestring, "START_STREAM") == 0) {
@@ -565,18 +609,33 @@ esp_err_t ws_control_handler(httpd_req_t *req) {
         cJSON_Delete(root);
     }
 
-    if (strcmp((char*)buf, "OTA_PROGRESS") == 0) {
-        ota_ws_fd = fd;
-        free(buf);
-        return ESP_OK;
-    }
-
-    ret = httpd_ws_send_frame(req, &ws_pkt);
+    esp_err_t echo_ret = httpd_ws_send_frame(req, &ws_pkt);
     free(buf);
-    return ret;
+    return echo_ret;
 }
 
+
 void send_uart_ws_data(int uart_port, const uint8_t *data, size_t len) {
+    if (len >= 4 && data[0] == 0xFF && data[1] == 'L' && data[2] == 'O' && data[3] == 'G') {
+        const char *line = (const char *)(data + 4);
+        size_t line_len = strlen(line);
+
+        for (size_t i = 0; i < subs_count; ++i) {
+            bool enabled = (uart_port == UART_PORT_NUM_1) ? subscribers[i].uart1 : subscribers[i].uart2;
+            if (!enabled) continue;
+
+            httpd_ws_frame_t ws_pkt = {
+                .payload = (uint8_t *)line,
+                .len = line_len,
+                .type = HTTPD_WS_TYPE_TEXT
+            };
+            if (global_http_server) {
+                httpd_ws_send_frame_async(global_http_server, subscribers[i].fd, &ws_pkt);
+            }
+        }
+        return;
+    }
+
     char msg[1024];
 
     for (size_t i = 0; i < subs_count; ++i) {
@@ -613,7 +672,7 @@ void send_uart_ws_data(int uart_port, const uint8_t *data, size_t len) {
         const char *prefix = uart_port == UART_PORT_NUM_1 ? "uart1:" : "uart2:";
         offset += snprintf(msg + offset, sizeof(msg) - offset, "%s", prefix);
 
-        for (int j = 0; j < len && offset < sizeof(msg) - 3; ++j) {
+        for (int j = 0; j < len && offset < (int)sizeof(msg) - 3; ++j) {
             offset += snprintf(msg + offset, sizeof(msg) - offset, "%02X", data[j]);
         }
 
@@ -623,7 +682,6 @@ void send_uart_ws_data(int uart_port, const uint8_t *data, size_t len) {
             .type = HTTPD_WS_TYPE_TEXT
         };
 
-        extern httpd_handle_t global_http_server;
         if (global_http_server) {
             httpd_ws_send_frame_async(global_http_server, subscribers[i].fd, &ws_pkt);
         }

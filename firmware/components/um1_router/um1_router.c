@@ -3,18 +3,6 @@
 
 static const char *TAG = "um1_router";
 
-static const char* ifc_name(if_t ifc) {
-    switch (ifc) {
-        case IF_LAN: return "LAN";
-        case IF_AP:  return "AP";
-        case IF_STA: return "STA";
-        case IF_UART1: return "UART1";
-        case IF_UART2: return "UART2";
-        case IF_MQTT: return "MQTT";
-        default: return "?";
-    }
-}
-
 typedef enum { IF_NONE=0, IF_UART1, IF_UART2, IF_LAN, IF_AP, IF_STA, IF_MQTT } if_t;
 typedef enum { TP_NONE=0, TP_TCP, TP_UDP } tp_t;
 
@@ -41,15 +29,15 @@ typedef struct {
 } mon_tcp_srv_t;
 
 typedef struct {
-    int              udp_sock;
+    int                udp_sock;
     struct sockaddr_in udp_peers[8];
-    size_t           udp_peer_cnt;
+    size_t             udp_peer_cnt;
 } mon_udp_srv_t;
 
 typedef struct {
-    int              udp_sock;
+    int                udp_sock;
     struct sockaddr_in udp_peers[8];
-    size_t           udp_peer_cnt;
+    size_t             udp_peer_cnt;
 } gate_udp_srv_t;
 
 typedef struct {
@@ -59,15 +47,15 @@ typedef struct {
 typedef struct {
     int listen_fd;
     int client_fd;
+    struct sockaddr_in peer;
 } ip_server_t;
 
 typedef struct {
-    endpoint_t  gate;
-    ip_client_t gate_ip_cli;
-    ip_server_t gate_ip_srv;
+    endpoint_t    gate;
+    ip_client_t   gate_ip_cli;
+    ip_server_t   gate_ip_srv;
     gate_udp_srv_t gate_udp;
-
-    endpoint_t  mon;
+    endpoint_t    mon;
     mon_tcp_srv_t mon_tcp;
     mon_udp_srv_t mon_udp;
 } rt_ctx_t;
@@ -81,6 +69,18 @@ esp_netif_t *router_get_netif_sta(void){ return g_sta; }
 void router_set_netif_lan(esp_netif_t *n){ g_lan = n; }
 void router_set_netif_ap(esp_netif_t *n){ g_ap  = n; }
 void router_set_netif_sta(esp_netif_t *n){ g_sta = n; }
+
+static const char* ifc_name(if_t ifc) {
+    switch (ifc) {
+        case IF_LAN: return "LAN";
+        case IF_AP:  return "AP";
+        case IF_STA: return "STA";
+        case IF_UART1: return "UART1";
+        case IF_UART2: return "UART2";
+        case IF_MQTT: return "MQTT";
+        default: return "?";
+    }
+}
 
 static esp_netif_t *netif_for_ifc(if_t ifc) {
     switch (ifc) {
@@ -157,6 +157,7 @@ static if_t parse_ifc(const char *s){
     if (!ci_strcmp(s,"uart2")) return IF_UART2;
     return IF_NONE;
 }
+
 static tp_t parse_tp(const char *s){
     if (!s) return TP_NONE;
     if (!ci_strcmp(s,"tcp")) return TP_TCP;
@@ -197,6 +198,7 @@ static void mon_send_udp(rt_ctx_t *ctx, const uint8_t *data, size_t len){
                (struct sockaddr*)&ctx->mon_udp.udp_peers[i], sizeof(struct sockaddr_in));
     }
 }
+
 static void mon_send_tcp(rt_ctx_t *ctx, const uint8_t *data, size_t len){
     if (!ctx) return;
     if (ctx->mon_tcp.listen_fd<0) return;
@@ -205,6 +207,7 @@ static void mon_send_tcp(rt_ctx_t *ctx, const uint8_t *data, size_t len){
         if (fd>=0) send(fd, data, len, 0);
     }
 }
+
 static void mon_send_mqtt(rt_ctx_t *ctx, const uint8_t *data, size_t len){
     if (!ctx) return;
     if (ctx->mon.ifc!=IF_MQTT || ctx->mon.tx_topic[0]=='\0') return;
@@ -295,24 +298,66 @@ void router_on_uart_rx(int uart_port, const uint8_t *data, size_t len){
             gate_send_uart(other, data, len);
             char msg[128];
             snprintf(msg, sizeof(msg), "[UART%d]->[UART%d]", uart_port, other);
-            send_ws_log(uart_port, msg);
+            size_t msg_len = strlen(msg);
+            uint8_t *pay = malloc(4 + msg_len + 1);
+            if (pay) {
+                pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
+                memcpy(pay+4, msg, msg_len+1);
+                send_uart_ws_data(uart_port, pay, 4 + msg_len + 1);
+                free(pay);
+            }
         }break;
         case IF_LAN:
         case IF_AP:
         case IF_STA:{
             gate_send_ip(ctx, data, len);
-            char msg[128];
-            snprintf(msg, sizeof(msg), "[UART%d]->[%s][%s][%d][%s]",
-                     uart_port, ifc_name(ctx->gate.ifc), ctx->gate.ip.addr,
-                     ctx->gate.ip.port,
-                     ctx->gate.ip.tp==TP_TCP?"TCP":"UDP");
-            send_ws_log(uart_port, msg);
+            char ipbuf[16] = "";
+            int rport = 0;
+            if (ctx->gate.ip.tp == TP_TCP) {
+                if (ctx->gate.ip.is_client) {
+                    strncpy(ipbuf, ctx->gate.ip.addr, sizeof(ipbuf)-1);
+                    rport = ctx->gate.ip.port;
+                } else {
+                    if (ctx->gate_ip_srv.client_fd >= 0) {
+                        inet_ntoa_r(ctx->gate_ip_srv.peer.sin_addr, ipbuf, sizeof(ipbuf));
+                        rport = ntohs(ctx->gate_ip_srv.peer.sin_port);
+                    }
+                }
+                char msg[160];
+                snprintf(msg, sizeof(msg), "[UART%d]->[%s][%s][%d][TCP]", uart_port, ifc_name(ctx->gate.ifc), ipbuf, rport);
+                size_t msg_len = strlen(msg);
+                uint8_t *pay = malloc(4 + msg_len + 1);
+                if (pay) {
+                    pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
+                    memcpy(pay+4, msg, msg_len+1);
+                    send_uart_ws_data(uart_port, pay, 4 + msg_len + 1);
+                    free(pay);
+                }
+            } else {
+                char msg[160];
+                snprintf(msg, sizeof(msg), "[UART%d]->[%s][%s][%d][UDP]", uart_port, ifc_name(ctx->gate.ifc), ctx->gate.ip.addr, ctx->gate.ip.port);
+                size_t msg_len = strlen(msg);
+                uint8_t *pay = malloc(4 + msg_len + 1);
+                if (pay) {
+                    pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
+                    memcpy(pay+4, msg, msg_len+1);
+                    send_uart_ws_data(uart_port, pay, 4 + msg_len + 1);
+                    free(pay);
+                }
+            }
         }break;
         case IF_MQTT:{
             gate_send_mqtt(ctx, data, len);
             char msg[64];
             snprintf(msg, sizeof(msg), "[UART%d]->[MQTT]", uart_port);
-            send_ws_log(uart_port, msg);
+            size_t msg_len = strlen(msg);
+            uint8_t *pay = malloc(4 + msg_len + 1);
+            if (pay) {
+                pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
+                memcpy(pay+4, msg, msg_len+1);
+                send_uart_ws_data(uart_port, pay, 4 + msg_len + 1);
+                free(pay);
+            }
         }break;
         default: break;
     }
@@ -327,7 +372,14 @@ void router_on_mqtt_message(const char *topic, const uint8_t *data, size_t len){
             gate_send_uart(u, data, len);
             char msg[64];
             snprintf(msg, sizeof(msg), "[MQTT]->[UART%d]", u);
-            send_ws_log(u, msg);
+            size_t msg_len = strlen(msg);
+            uint8_t *pay = malloc(4 + msg_len + 1);
+            if (pay) {
+                pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
+                memcpy(pay+4, msg, msg_len+1);
+                send_uart_ws_data(u, pay, 4 + msg_len + 1);
+                free(pay);
+            }
             mon_tee_matching(ctx, data, len);
         }
     }
@@ -337,18 +389,14 @@ static void mon_udp_server_task(void *pv){
     rt_ctx_t *ctx = (rt_ctx_t*)pv;
     for(;;){
         if (!wait_ip_ready(ctx->mon.ifc, 500)) continue;
-
         ctx->mon_udp.udp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
         int s = ctx->mon_udp.udp_sock;
         if (s<0){ vTaskDelay(pdMS_TO_TICKS(500)); continue; }
-
         int yes=1; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(yes));
-
         struct sockaddr_in bindaddr={0};
         bindaddr.sin_family=AF_INET;
         bindaddr.sin_port=htons(ctx->mon.ip.port);
         bindaddr.sin_addr.s_addr = ip_of_if(ctx->mon.ifc);
-
         if (bind(s,(struct sockaddr*)&bindaddr,sizeof(bindaddr)) < 0){
             ESP_LOGE(TAG,"MON-UDP: bind(%s:%d) failed, err=%d",
                      inet_ntoa(*(struct in_addr*)&bindaddr.sin_addr.s_addr), ctx->mon.ip.port, errno);
@@ -383,16 +431,13 @@ static void mon_tcp_server_task(void *pv){
     rt_ctx_t *ctx=(rt_ctx_t*)pv;
     for(;;){
         if (!wait_ip_ready(ctx->mon.ifc, 500)) continue;
-
         int s = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
         if (s<0){ vTaskDelay(pdMS_TO_TICKS(500)); continue; }
         ctx->mon_tcp.listen_fd = s;
-
         int yes=1; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(yes));
         struct sockaddr_in a={0};
         a.sin_family=AF_INET; a.sin_port=htons(ctx->mon.ip.port);
         a.sin_addr.s_addr = ip_of_if(ctx->mon.ifc);
-
         if (bind(s,(struct sockaddr*)&a,sizeof(a)) < 0) {
             ESP_LOGE(TAG,"MON-TCP: bind(%s:%d) failed, err=%d",
                      inet_ntoa(*(struct in_addr*)&a.sin_addr.s_addr), ctx->mon.ip.port, errno);
@@ -430,16 +475,13 @@ static void gate_tcp_client_task(void *pv){
     ctx->gate_ip_cli.sock = -1;
     for(;;){
         if (!wait_ip_ready(ctx->gate.ifc, 500)) continue;
-
         int s = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
         if (s<0){ vTaskDelay(pdMS_TO_TICKS(1000)); continue; }
-
         if (!bind_local_to_if(s, ctx->gate.ifc)){
             close(s);
             vTaskDelay(pdMS_TO_TICKS(500));
             continue;
         }
-
         struct sockaddr_in to={0}; to.sin_family=AF_INET;
         to.sin_port=htons(ctx->gate.ip.port);
         to.sin_addr.s_addr=inet_addr(ctx->gate.ip.addr);
@@ -456,7 +498,14 @@ static void gate_tcp_client_task(void *pv){
                 snprintf(msg, sizeof(msg), "[%s][%s][%d][TCP]->[UART%d]",
                          ifc_name(ctx->gate.ifc), ctx->gate.ip.addr,
                          ctx->gate.ip.port, u);
-                send_ws_log(u, msg);
+                size_t msg_len = strlen(msg);
+                uint8_t *pay = malloc(4 + msg_len + 1);
+                if (pay) {
+                    pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
+                    memcpy(pay+4, msg, msg_len+1);
+                    send_uart_ws_data(u, pay, 4 + msg_len + 1);
+                    free(pay);
+                }
                 mon_tee_matching(ctx, buf, n);
             }
         } else {
@@ -476,16 +525,13 @@ static void gate_tcp_server_task(void *pv){
     rt_ctx_t *ctx=(rt_ctx_t*)pv;
     for(;;){
         if (!wait_ip_ready(ctx->gate.ifc, 500)) continue;
-
         int s = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
         if (s<0){ vTaskDelay(pdMS_TO_TICKS(500)); continue; }
         ctx->gate_ip_srv.listen_fd = s;
-
         int yes=1; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(yes));
         struct sockaddr_in a={0};
         a.sin_family=AF_INET; a.sin_port=htons(ctx->gate.ip.port);
         a.sin_addr.s_addr = ip_of_if(ctx->gate.ifc);
-
         if (bind(s,(struct sockaddr*)&a,sizeof(a)) < 0) {
             ESP_LOGE(TAG,"GATE TCP-SRV: bind(%s:%d) failed, err=%d",
                      inet_ntoa(*(struct in_addr*)&a.sin_addr.s_addr), ctx->gate.ip.port, errno);
@@ -506,6 +552,7 @@ static void gate_tcp_server_task(void *pv){
             int c = accept(s,(struct sockaddr*)&ca,&cl);
             if (c<0){ vTaskDelay(pdMS_TO_TICKS(10)); continue; }
             ctx->gate_ip_srv.client_fd = c;
+            ctx->gate_ip_srv.peer = ca;
             ESP_LOGI(TAG, "GATE TCP-Server: client connected from %s:%d",
                      inet_ntoa(ca.sin_addr), ntohs(ca.sin_port));
             char ip[16];
@@ -521,10 +568,18 @@ static void gate_tcp_server_task(void *pv){
                 char msg[128];
                 snprintf(msg, sizeof(msg), "[%s][%s][%d][TCP]->[UART%d]",
                          ifc_name(ctx->gate.ifc), ip, rport, u);
-                send_ws_log(u, msg);
+                size_t msg_len = strlen(msg);
+                uint8_t *pay = malloc(4 + msg_len + 1);
+                if (pay) {
+                    pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
+                    memcpy(pay+4, msg, msg_len+1);
+                    send_uart_ws_data(u, pay, 4 + msg_len + 1);
+                    free(pay);
+                }
                 mon_tee_matching(ctx, buf, n);
             }
             shutdown(c,SHUT_RDWR); close(c); ctx->gate_ip_srv.client_fd=-1;
+            memset(&ctx->gate_ip_srv.peer, 0, sizeof(ctx->gate_ip_srv.peer));
         }
     }
 }
@@ -533,16 +588,13 @@ static void gate_udp_client_task(void *pv){
     rt_ctx_t *ctx=(rt_ctx_t*)pv;
     for(;;){
         if (!wait_ip_ready(ctx->gate.ifc, 500)) continue;
-
         int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
         if (s<0){ vTaskDelay(pdMS_TO_TICKS(500)); continue; }
-
         if (!bind_local_to_if(s, ctx->gate.ifc)){
             close(s);
             vTaskDelay(pdMS_TO_TICKS(500));
             continue;
         }
-
         ctx->gate_ip_cli.sock = s;
         struct timeval tv={.tv_sec=0,.tv_usec=0}; setsockopt(s,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv));
         for(;;){
@@ -559,7 +611,14 @@ static void gate_udp_client_task(void *pv){
                 char msg[128];
                 snprintf(msg, sizeof(msg), "[%s][%s][%d][UDP]->[UART%d]",
                          ifc_name(ctx->gate.ifc), ip, rport, u);
-                send_ws_log(u, msg);
+                size_t msg_len = strlen(msg);
+                uint8_t *pay = malloc(4 + msg_len + 1);
+                if (pay) {
+                    pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
+                    memcpy(pay+4, msg, msg_len+1);
+                    send_uart_ws_data(u, pay, 4 + msg_len + 1);
+                    free(pay);
+                }
                 mon_tee_matching(ctx, buf, n);
             }else{
                 vTaskDelay(pdMS_TO_TICKS(5));
@@ -572,17 +631,14 @@ static void gate_udp_server_task(void *pv){
     rt_ctx_t *ctx = (rt_ctx_t*)pv;
     for(;;){
         if (!wait_ip_ready(ctx->gate.ifc, 500)) continue;
-
         ctx->gate_udp.udp_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
         int s = ctx->gate_udp.udp_sock;
         if (s<0){ vTaskDelay(pdMS_TO_TICKS(500)); continue; }
         int yes=1; setsockopt(s,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(yes));
-
         struct sockaddr_in bindaddr={0};
         bindaddr.sin_family=AF_INET;
         bindaddr.sin_port=htons(ctx->gate.ip.port);
         bindaddr.sin_addr.s_addr = ip_of_if(ctx->gate.ifc);
-
         if (bind(s,(struct sockaddr*)&bindaddr,sizeof(bindaddr)) < 0){
             ESP_LOGE(TAG,"GATE-UDP: bind(%s:%d) failed, err=%d",
                      inet_ntoa(*(struct in_addr*)&bindaddr.sin_addr.s_addr), ctx->gate.ip.port, errno);
@@ -615,7 +671,14 @@ static void gate_udp_server_task(void *pv){
                 char msg[128];
                 snprintf(msg, sizeof(msg), "[%s][%s][%d][UDP]->[UART%d]",
                          ifc_name(ctx->gate.ifc), ip, rport, u);
-                send_ws_log(u, msg);
+                size_t msg_len = strlen(msg);
+                uint8_t *pay = malloc(4 + msg_len + 1);
+                if (pay) {
+                    pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
+                    memcpy(pay+4, msg, msg_len+1);
+                    send_uart_ws_data(u, pay, 4 + msg_len + 1);
+                    free(pay);
+                }
                 mon_tee_matching(ctx, buf, n);
             } else if (n<0) {
                 vTaskDelay(pdMS_TO_TICKS(5));
@@ -683,6 +746,7 @@ void router_start(void){
         g_ctx[i].gate_ip_cli.sock = -1;
         g_ctx[i].gate_ip_srv.listen_fd = -1;
         g_ctx[i].gate_ip_srv.client_fd = -1;
+        memset(&g_ctx[i].gate_ip_srv.peer, 0, sizeof(g_ctx[i].gate_ip_srv.peer));
         g_ctx[i].gate_udp.udp_sock = -1;
         g_ctx[i].gate_udp.udp_peer_cnt = 0;
         start_for_one(&g_ctx[i]);

@@ -74,7 +74,6 @@ function sendMessage() {
     const targets = [];
     if (uart1) targets.push("UART1");
     if (uart2) targets.push("UART2");
-    log(`[COMMAND] -> [${targets.join(" & ")}]`);
   } else {
     log("⚠️ WebSocket не подключен");
   }
