@@ -10,6 +10,8 @@ static int ota_ws_fd = -1;
 
 static const char *TAG = "http_server";
 
+void send_ws_log(int uart_port, const char *msg);
+
 httpd_uri_t login = {
     .uri      = "/login",
     .method   = HTTP_POST,
@@ -510,15 +512,36 @@ esp_err_t ws_control_handler(httpd_req_t *req) {
         return ESP_OK;
     }
 
-    httpd_ws_frame_t ws_pkt = { .type = HTTPD_WS_TYPE_TEXT };
+    httpd_ws_frame_t ws_pkt = {};
     esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
     if (ret != ESP_OK || ws_pkt.len == 0) return ret;
 
-    uint8_t *buf = calloc(1, ws_pkt.len + 1);
+    uint8_t *buf = malloc(ws_pkt.len);
+    if (!buf) return ESP_ERR_NO_MEM;
     ws_pkt.payload = buf;
     ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
     if (ret != ESP_OK) { free(buf); return ret; }
 
+    if (ws_pkt.type == HTTPD_WS_TYPE_BINARY) {
+        if (ws_pkt.len < 1) { free(buf); return ESP_OK; }
+        uint8_t mask = buf[0];
+        const uint8_t *data = buf + 1;
+        size_t dlen = ws_pkt.len - 1;
+        if (mask & 0x1) {
+            uart_write_bytes(UART_PORT_NUM_1, (const char*)data, dlen);
+            uart_wait_tx_done(UART_PORT_NUM_1, portMAX_DELAY);
+            send_ws_log(UART_PORT_NUM_1, "[COMMAND] -> [UART1]");
+        }
+        if (mask & 0x2) {
+            uart_write_bytes(UART_PORT_NUM_2, (const char*)data, dlen);
+            uart_wait_tx_done(UART_PORT_NUM_2, portMAX_DELAY);
+            send_ws_log(UART_PORT_NUM_2, "[COMMAND] -> [UART2]");
+        }
+        free(buf);
+        return ESP_OK;
+    }
+
+    buf[ws_pkt.len] = 0;
     ESP_LOGI(TAG, "Received message: %s", buf);
     int fd = httpd_req_to_sockfd(req);
 
@@ -601,6 +624,23 @@ void send_uart_ws_data(int uart_port, const uint8_t *data, size_t len) {
         };
 
         extern httpd_handle_t global_http_server;
+        if (global_http_server) {
+            httpd_ws_send_frame_async(global_http_server, subscribers[i].fd, &ws_pkt);
+        }
+    }
+}
+
+void send_ws_log(int uart_port, const char *msg) {
+    for (size_t i = 0; i < subs_count; ++i) {
+        bool enabled = (uart_port == UART_PORT_NUM_1) ? subscribers[i].uart1 : subscribers[i].uart2;
+        if (!enabled) continue;
+
+        httpd_ws_frame_t ws_pkt = {
+            .payload = (uint8_t *)msg,
+            .len = strlen(msg),
+            .type = HTTPD_WS_TYPE_TEXT
+        };
+
         if (global_http_server) {
             httpd_ws_send_frame_async(global_http_server, subscribers[i].fd, &ws_pkt);
         }

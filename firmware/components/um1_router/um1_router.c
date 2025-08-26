@@ -1,6 +1,19 @@
 #include "um1_router.h"
+#include "um1_http_server.h"
 
 static const char *TAG = "um1_router";
+
+static const char* ifc_name(if_t ifc) {
+    switch (ifc) {
+        case IF_LAN: return "LAN";
+        case IF_AP:  return "AP";
+        case IF_STA: return "STA";
+        case IF_UART1: return "UART1";
+        case IF_UART2: return "UART2";
+        case IF_MQTT: return "MQTT";
+        default: return "?";
+    }
+}
 
 typedef enum { IF_NONE=0, IF_UART1, IF_UART2, IF_LAN, IF_AP, IF_STA, IF_MQTT } if_t;
 typedef enum { TP_NONE=0, TP_TCP, TP_UDP } tp_t;
@@ -280,14 +293,26 @@ void router_on_uart_rx(int uart_port, const uint8_t *data, size_t len){
         case IF_UART2:{
             int other = (ctx->gate.uart_port==2)?2:1;
             gate_send_uart(other, data, len);
+            char msg[128];
+            snprintf(msg, sizeof(msg), "[UART%d]->[UART%d]", uart_port, other);
+            send_ws_log(uart_port, msg);
         }break;
         case IF_LAN:
         case IF_AP:
         case IF_STA:{
             gate_send_ip(ctx, data, len);
+            char msg[128];
+            snprintf(msg, sizeof(msg), "[UART%d]->[%s][%s][%d][%s]",
+                     uart_port, ifc_name(ctx->gate.ifc), ctx->gate.ip.addr,
+                     ctx->gate.ip.port,
+                     ctx->gate.ip.tp==TP_TCP?"TCP":"UDP");
+            send_ws_log(uart_port, msg);
         }break;
         case IF_MQTT:{
             gate_send_mqtt(ctx, data, len);
+            char msg[64];
+            snprintf(msg, sizeof(msg), "[UART%d]->[MQTT]", uart_port);
+            send_ws_log(uart_port, msg);
         }break;
         default: break;
     }
@@ -298,7 +323,11 @@ void router_on_mqtt_message(const char *topic, const uint8_t *data, size_t len){
     for (int i=0;i<2;i++){
         rt_ctx_t *ctx=&g_ctx[i];
         if (ctx->gate.ifc==IF_MQTT && ctx->gate.rx_topic[0] && strcmp(topic, ctx->gate.rx_topic)==0){
-            gate_send_uart(i==1?2:1, data, len);
+            int u = i==1?2:1;
+            gate_send_uart(u, data, len);
+            char msg[64];
+            snprintf(msg, sizeof(msg), "[MQTT]->[UART%d]", u);
+            send_ws_log(u, msg);
             mon_tee_matching(ctx, data, len);
         }
     }
@@ -421,7 +450,13 @@ static void gate_tcp_client_task(void *pv){
             for(;;){
                 ssize_t n = recv(s,buf,sizeof(buf),0);
                 if (n<=0) break;
-                gate_send_uart((&g_ctx[0]==ctx)?1:2, buf, n);
+                int u = (&g_ctx[0]==ctx)?1:2;
+                gate_send_uart(u, buf, n);
+                char msg[128];
+                snprintf(msg, sizeof(msg), "[%s][%s][%d][TCP]->[UART%d]",
+                         ifc_name(ctx->gate.ifc), ctx->gate.ip.addr,
+                         ctx->gate.ip.port, u);
+                send_ws_log(u, msg);
                 mon_tee_matching(ctx, buf, n);
             }
         } else {
@@ -473,11 +508,20 @@ static void gate_tcp_server_task(void *pv){
             ctx->gate_ip_srv.client_fd = c;
             ESP_LOGI(TAG, "GATE TCP-Server: client connected from %s:%d",
                      inet_ntoa(ca.sin_addr), ntohs(ca.sin_port));
+            char ip[16];
+            strncpy(ip, inet_ntoa(ca.sin_addr), sizeof(ip)-1);
+            ip[sizeof(ip)-1] = '\0';
+            int rport = ntohs(ca.sin_port);
             uint8_t buf[1024];
             for(;;){
                 ssize_t n = recv(c,buf,sizeof(buf),0);
                 if (n<=0) break;
-                gate_send_uart((&g_ctx[0]==ctx)?1:2, buf, n);
+                int u = (&g_ctx[0]==ctx)?1:2;
+                gate_send_uart(u, buf, n);
+                char msg[128];
+                snprintf(msg, sizeof(msg), "[%s][%s][%d][TCP]->[UART%d]",
+                         ifc_name(ctx->gate.ifc), ip, rport, u);
+                send_ws_log(u, msg);
                 mon_tee_matching(ctx, buf, n);
             }
             shutdown(c,SHUT_RDWR); close(c); ctx->gate_ip_srv.client_fd=-1;
@@ -506,7 +550,16 @@ static void gate_udp_client_task(void *pv){
             struct sockaddr_in from; socklen_t fl=sizeof(from);
             ssize_t n = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr*)&from, &fl);
             if (n>0){
-                gate_send_uart((&g_ctx[0]==ctx)?1:2, buf, n);
+                int u = (&g_ctx[0]==ctx)?1:2;
+                gate_send_uart(u, buf, n);
+                char ip[16];
+                strncpy(ip, inet_ntoa(from.sin_addr), sizeof(ip)-1);
+                ip[sizeof(ip)-1] = '\0';
+                int rport = ntohs(from.sin_port);
+                char msg[128];
+                snprintf(msg, sizeof(msg), "[%s][%s][%d][UDP]->[UART%d]",
+                         ifc_name(ctx->gate.ifc), ip, rport, u);
+                send_ws_log(u, msg);
                 mon_tee_matching(ctx, buf, n);
             }else{
                 vTaskDelay(pdMS_TO_TICKS(5));
@@ -553,7 +606,16 @@ static void gate_udp_server_task(void *pv){
                 if(!known && ctx->gate_udp.udp_peer_cnt<sizeof(ctx->gate_udp.udp_peers)/sizeof(ctx->gate_udp.udp_peers[0])){
                     ctx->gate_udp.udp_peers[ctx->gate_udp.udp_peer_cnt++] = from;
                 }
-                gate_send_uart((&g_ctx[0]==ctx)?1:2, buf, n);
+                int u = (&g_ctx[0]==ctx)?1:2;
+                gate_send_uart(u, buf, n);
+                char ip[16];
+                strncpy(ip, inet_ntoa(from.sin_addr), sizeof(ip)-1);
+                ip[sizeof(ip)-1] = '\0';
+                int rport = ntohs(from.sin_port);
+                char msg[128];
+                snprintf(msg, sizeof(msg), "[%s][%s][%d][UDP]->[UART%d]",
+                         ifc_name(ctx->gate.ifc), ip, rport, u);
+                send_ws_log(u, msg);
                 mon_tee_matching(ctx, buf, n);
             } else if (n<0) {
                 vTaskDelay(pdMS_TO_TICKS(5));
