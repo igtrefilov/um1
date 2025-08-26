@@ -54,10 +54,29 @@ function stopStream() {
 }
 
 function sendMessage() {
-  const text = document.getElementById("message").value;
-  if (text.trim() && ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(text);
-    log("📤 Sent: " + text);
+  const text = document.getElementById("message").value.trim();
+  const uart1 = document.getElementById("uart1").checked;
+  const uart2 = document.getElementById("uart2").checked;
+
+  if (!text || !(uart1 || uart2)) return;
+  if (text.length % 2 !== 0) {
+    log("⚠️ Нечётная длина ввода");
+    return;
+  }
+
+  const bytes = text.match(/.{1,2}/g).map(h => parseInt(h, 16));
+  const payload = new Uint8Array(bytes.length + 1);
+  payload[0] = (uart1 ? 1 : 0) | (uart2 ? 2 : 0);
+  payload.set(bytes, 1);
+
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(payload);
+    const targets = [];
+    if (uart1) targets.push("UART1");
+    if (uart2) targets.push("UART2");
+    log(`[COMMAND] -> [${targets.join(" & ")}]`);
+  } else {
+    log("⚠️ WebSocket не подключен");
   }
 }
 
