@@ -113,7 +113,7 @@ void send_uart_packet_with_timestamp(int uart_port, const uint8_t *data, size_t 
     size_t total_len = offset + len;
 
     // WebSocket
-    send_uart_ws_data(uart_port, extended_buffer, total_len);
+    //send_uart_ws_data(uart_port, extended_buffer, total_len);
 
     router_on_uart_rx(uart_port, extended_buffer, total_len);
 }

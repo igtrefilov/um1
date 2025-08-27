@@ -1,5 +1,6 @@
 #include "um1_router.h"
 #include "um1_http_server.h"
+#include <stdarg.h>
 
 static const char *TAG = "um1_router";
 
@@ -288,79 +289,113 @@ static void gate_send_mqtt(rt_ctx_t *ctx, const uint8_t *data, size_t len){
     if (c) esp_mqtt_client_publish(c, ctx->gate.tx_topic, (const char*)data, (int)len, 1, 0);
 }
 
+static char* bytes_to_hex_spaced(const uint8_t *data, size_t len){
+    size_t cap = len ? (len * 3) : 1;
+    char *s = (char*)malloc(cap + 1);
+    if (!s) return NULL;
+    size_t pos = 0;
+    for (size_t i = 0; i < len; i++){
+        if (pos + 3 > cap) break;
+        pos += snprintf(s + pos, cap + 1 - pos, (i + 1 < len) ? "%02X " : "%02X", data[i]);
+    }
+    if (len == 0) s[0] = '\0';
+    return s;
+}
+
+static void send_log_fmt(int uart_port, const char *fmt, ...){
+    va_list ap;
+    va_start(ap, fmt);
+    int need = vsnprintf(NULL, 0, fmt, ap);
+    va_end(ap);
+    if (need < 0) return;
+    uint8_t *pay = (uint8_t*)malloc(4 + (size_t)need + 1);
+    if (!pay) return;
+    pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
+    va_start(ap, fmt);
+    vsnprintf((char*)pay+4, (size_t)need + 1, fmt, ap);
+    va_end(ap);
+    send_uart_ws_data(uart_port, pay, 4 + (size_t)need + 1);
+    free(pay);
+}
+
+static void getsock_local(int s, char *ipbuf, size_t ipbufsz, int *port){
+    struct sockaddr_in sa; socklen_t sl=sizeof(sa);
+    if (ipbuf && ipbufsz) ipbuf[0]='\0';
+    if (port) *port=0;
+    if (s>=0 && getsockname(s,(struct sockaddr*)&sa,&sl)==0){
+        if (ipbuf && ipbufsz){
+            const char *p = inet_ntoa(sa.sin_addr);
+            strncpy(ipbuf, p, ipbufsz-1);
+            ipbuf[ipbufsz-1]='\0';
+        }
+        if (port) *port = ntohs(sa.sin_port);
+    }
+}
+
 void router_on_uart_rx(int uart_port, const uint8_t *data, size_t len){
     int idx = (uart_port==2)?1:0;
     rt_ctx_t *ctx = &g_ctx[idx];
+    char *data_str = bytes_to_hex_spaced(data, len);
     switch(ctx->gate.ifc){
         case IF_UART1:
         case IF_UART2:{
             int other = (ctx->gate.uart_port==2)?2:1;
             gate_send_uart(other, data, len);
-            char msg[128];
-            snprintf(msg, sizeof(msg), "[UART%d]->[UART%d]", uart_port, other);
-            size_t msg_len = strlen(msg);
-            uint8_t *pay = malloc(4 + msg_len + 1);
-            if (pay) {
-                pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
-                memcpy(pay+4, msg, msg_len+1);
-                send_uart_ws_data(uart_port, pay, 4 + msg_len + 1);
-                free(pay);
-            }
+            send_log_fmt(uart_port, "[UART%d]->[UART%d] %s", uart_port, other, data_str ? data_str : "");
         }break;
         case IF_LAN:
         case IF_AP:
         case IF_STA:{
             gate_send_ip(ctx, data, len);
-            char ipbuf[16] = "";
-            int rport = 0;
             if (ctx->gate.ip.tp == TP_TCP) {
                 if (ctx->gate.ip.is_client) {
-                    strncpy(ipbuf, ctx->gate.ip.addr, sizeof(ipbuf)-1);
-                    rport = ctx->gate.ip.port;
+                    char lip[16]; int lport=0; getsock_local(ctx->gate_ip_cli.sock, lip, sizeof(lip), &lport);
+                    send_log_fmt(uart_port, "[UART%d]->[%s/CLI][LOCAL %s:%d]->[PEER %s:%d][TCP] %s",
+                                 uart_port, ifc_name(ctx->gate.ifc),
+                                 lip[0]?lip:"?", lport,
+                                 ctx->gate.ip.addr, ctx->gate.ip.port,
+                                 data_str ? data_str : "");
                 } else {
+                    char lip[16]; int lport = ctx->gate.ip.port;
+                    in_addr_t la = ip_of_if(ctx->gate.ifc);
+                    strncpy(lip, inet_ntoa(*(struct in_addr*)&la), sizeof(lip)-1); lip[sizeof(lip)-1]='\0';
+                    char rip[16]=""; int rport=0;
                     if (ctx->gate_ip_srv.client_fd >= 0) {
-                        inet_ntoa_r(ctx->gate_ip_srv.peer.sin_addr, ipbuf, sizeof(ipbuf));
+                        inet_ntoa_r(ctx->gate_ip_srv.peer.sin_addr, rip, sizeof(rip));
                         rport = ntohs(ctx->gate_ip_srv.peer.sin_port);
                     }
-                }
-                char msg[160];
-                snprintf(msg, sizeof(msg), "[UART%d]->[%s][%s][%d][TCP]", uart_port, ifc_name(ctx->gate.ifc), ipbuf, rport);
-                size_t msg_len = strlen(msg);
-                uint8_t *pay = malloc(4 + msg_len + 1);
-                if (pay) {
-                    pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
-                    memcpy(pay+4, msg, msg_len+1);
-                    send_uart_ws_data(uart_port, pay, 4 + msg_len + 1);
-                    free(pay);
+                    send_log_fmt(uart_port, "[UART%d]->[%s/SRV][LOCAL %s:%d]->[PEER %s:%d][TCP] %s",
+                                 uart_port, ifc_name(ctx->gate.ifc),
+                                 lip, lport,
+                                 rip, rport,
+                                 data_str ? data_str : "");
                 }
             } else {
-                char msg[160];
-                snprintf(msg, sizeof(msg), "[UART%d]->[%s][%s][%d][UDP]", uart_port, ifc_name(ctx->gate.ifc), ctx->gate.ip.addr, ctx->gate.ip.port);
-                size_t msg_len = strlen(msg);
-                uint8_t *pay = malloc(4 + msg_len + 1);
-                if (pay) {
-                    pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
-                    memcpy(pay+4, msg, msg_len+1);
-                    send_uart_ws_data(uart_port, pay, 4 + msg_len + 1);
-                    free(pay);
+                if (ctx->gate.ip.is_client){
+                    char lip[16]; int lport=0; getsock_local(ctx->gate_ip_cli.sock, lip, sizeof(lip), &lport);
+                    send_log_fmt(uart_port, "[UART%d]->[%s/CLI][LOCAL %s:%d]->[PEER %s:%d][UDP] %s",
+                                 uart_port, ifc_name(ctx->gate.ifc),
+                                 lip[0]?lip:"?", lport,
+                                 ctx->gate.ip.addr, ctx->gate.ip.port,
+                                 data_str ? data_str : "");
+                } else {
+                    char lip[16]; int lport=ctx->gate.ip.port;
+                    in_addr_t la = ip_of_if(ctx->gate.ifc);
+                    strncpy(lip, inet_ntoa(*(struct in_addr*)&la), sizeof(lip)-1); lip[sizeof(lip)-1]='\0';
+                    send_log_fmt(uart_port, "[UART%d]->[%s/SRV][LOCAL %s:%d]->[PEER *:*][UDP] %s",
+                                 uart_port, ifc_name(ctx->gate.ifc),
+                                 lip, lport,
+                                 data_str ? data_str : "");
                 }
             }
         }break;
         case IF_MQTT:{
             gate_send_mqtt(ctx, data, len);
-            char msg[64];
-            snprintf(msg, sizeof(msg), "[UART%d]->[MQTT]", uart_port);
-            size_t msg_len = strlen(msg);
-            uint8_t *pay = malloc(4 + msg_len + 1);
-            if (pay) {
-                pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
-                memcpy(pay+4, msg, msg_len+1);
-                send_uart_ws_data(uart_port, pay, 4 + msg_len + 1);
-                free(pay);
-            }
+            send_log_fmt(uart_port, "[UART%d]->[MQTT] %s", uart_port, data_str ? data_str : "");
         }break;
         default: break;
     }
+    if (data_str) free(data_str);
     mon_tee_matching(ctx, data, len);
 }
 
@@ -370,15 +405,16 @@ void router_on_mqtt_message(const char *topic, const uint8_t *data, size_t len){
         if (ctx->gate.ifc==IF_MQTT && ctx->gate.rx_topic[0] && strcmp(topic, ctx->gate.rx_topic)==0){
             int u = i==1?2:1;
             gate_send_uart(u, data, len);
-            char msg[64];
-            snprintf(msg, sizeof(msg), "[MQTT]->[UART%d]", u);
-            size_t msg_len = strlen(msg);
-            uint8_t *pay = malloc(4 + msg_len + 1);
-            if (pay) {
-                pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
-                memcpy(pay+4, msg, msg_len+1);
-                send_uart_ws_data(u, pay, 4 + msg_len + 1);
-                free(pay);
+            uint8_t *pay = NULL;
+            int need = snprintf(NULL,0,"[MQTT]->[UART%d]",u);
+            if (need>=0){
+                pay = (uint8_t*)malloc(4 + (size_t)need + 1);
+                if (pay){
+                    pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
+                    snprintf((char*)pay+4,(size_t)need+1,"[MQTT]->[UART%d]",u);
+                    send_uart_ws_data(u, pay, 4 + (size_t)need + 1);
+                    free(pay);
+                }
             }
             mon_tee_matching(ctx, data, len);
         }
@@ -494,18 +530,15 @@ static void gate_tcp_client_task(void *pv){
                 if (n<=0) break;
                 int u = (&g_ctx[0]==ctx)?1:2;
                 gate_send_uart(u, buf, n);
-                char msg[128];
-                snprintf(msg, sizeof(msg), "[%s][%s][%d][TCP]->[UART%d]",
-                         ifc_name(ctx->gate.ifc), ctx->gate.ip.addr,
-                         ctx->gate.ip.port, u);
-                size_t msg_len = strlen(msg);
-                uint8_t *pay = malloc(4 + msg_len + 1);
-                if (pay) {
-                    pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
-                    memcpy(pay+4, msg, msg_len+1);
-                    send_uart_ws_data(u, pay, 4 + msg_len + 1);
-                    free(pay);
-                }
+                char lip[16]; int lport=0; getsock_local(s, lip, sizeof(lip), &lport);
+                char *data_str = bytes_to_hex_spaced(buf, n);
+                send_log_fmt(u, "[%s/CLI][LOCAL %s:%d]<-[PEER %s:%d][TCP]->[UART%d] %s",
+                             ifc_name(ctx->gate.ifc),
+                             lip[0]?lip:"?", lport,
+                             ctx->gate.ip.addr, ctx->gate.ip.port,
+                             u,
+                             data_str ? data_str : "");
+                if (data_str) free(data_str);
                 mon_tee_matching(ctx, buf, n);
             }
         } else {
@@ -555,9 +588,10 @@ static void gate_tcp_server_task(void *pv){
             ctx->gate_ip_srv.peer = ca;
             ESP_LOGI(TAG, "GATE TCP-Server: client connected from %s:%d",
                      inet_ntoa(ca.sin_addr), ntohs(ca.sin_port));
-            char ip[16];
-            strncpy(ip, inet_ntoa(ca.sin_addr), sizeof(ip)-1);
-            ip[sizeof(ip)-1] = '\0';
+            char lip[16]; int lport=ctx->gate.ip.port;
+            in_addr_t la = ip_of_if(ctx->gate.ifc);
+            strncpy(lip, inet_ntoa(*(struct in_addr*)&la), sizeof(lip)-1); lip[sizeof(lip)-1]='\0';
+            char rip[16]; strncpy(rip, inet_ntoa(ca.sin_addr), sizeof(rip)-1); rip[sizeof(rip)-1]='\0';
             int rport = ntohs(ca.sin_port);
             uint8_t buf[1024];
             for(;;){
@@ -565,17 +599,14 @@ static void gate_tcp_server_task(void *pv){
                 if (n<=0) break;
                 int u = (&g_ctx[0]==ctx)?1:2;
                 gate_send_uart(u, buf, n);
-                char msg[128];
-                snprintf(msg, sizeof(msg), "[%s][%s][%d][TCP]->[UART%d]",
-                         ifc_name(ctx->gate.ifc), ip, rport, u);
-                size_t msg_len = strlen(msg);
-                uint8_t *pay = malloc(4 + msg_len + 1);
-                if (pay) {
-                    pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
-                    memcpy(pay+4, msg, msg_len+1);
-                    send_uart_ws_data(u, pay, 4 + msg_len + 1);
-                    free(pay);
-                }
+                char *data_str = bytes_to_hex_spaced(buf, n);
+                send_log_fmt(u, "[%s/SRV][LOCAL %s:%d]<-[PEER %s:%d][TCP]->[UART%d] %s",
+                             ifc_name(ctx->gate.ifc),
+                             lip, lport,
+                             rip, rport,
+                             u,
+                             data_str ? data_str : "");
+                if (data_str) free(data_str);
                 mon_tee_matching(ctx, buf, n);
             }
             shutdown(c,SHUT_RDWR); close(c); ctx->gate_ip_srv.client_fd=-1;
@@ -604,21 +635,17 @@ static void gate_udp_client_task(void *pv){
             if (n>0){
                 int u = (&g_ctx[0]==ctx)?1:2;
                 gate_send_uart(u, buf, n);
-                char ip[16];
-                strncpy(ip, inet_ntoa(from.sin_addr), sizeof(ip)-1);
-                ip[sizeof(ip)-1] = '\0';
+                char lip[16]; int lport=0; getsock_local(s, lip, sizeof(lip), &lport);
+                char rip[16]; strncpy(rip, inet_ntoa(from.sin_addr), sizeof(rip)-1); rip[sizeof(rip)-1]='\0';
                 int rport = ntohs(from.sin_port);
-                char msg[128];
-                snprintf(msg, sizeof(msg), "[%s][%s][%d][UDP]->[UART%d]",
-                         ifc_name(ctx->gate.ifc), ip, rport, u);
-                size_t msg_len = strlen(msg);
-                uint8_t *pay = malloc(4 + msg_len + 1);
-                if (pay) {
-                    pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
-                    memcpy(pay+4, msg, msg_len+1);
-                    send_uart_ws_data(u, pay, 4 + msg_len + 1);
-                    free(pay);
-                }
+                char *data_str = bytes_to_hex_spaced(buf, n);
+                send_log_fmt(u, "[%s/CLI][LOCAL %s:%d]<-[PEER %s:%d][UDP]->[UART%d] %s",
+                             ifc_name(ctx->gate.ifc),
+                             lip[0]?lip:"?", lport,
+                             rip, rport,
+                             u,
+                             data_str ? data_str : "");
+                if (data_str) free(data_str);
                 mon_tee_matching(ctx, buf, n);
             }else{
                 vTaskDelay(pdMS_TO_TICKS(5));
@@ -664,21 +691,19 @@ static void gate_udp_server_task(void *pv){
                 }
                 int u = (&g_ctx[0]==ctx)?1:2;
                 gate_send_uart(u, buf, n);
-                char ip[16];
-                strncpy(ip, inet_ntoa(from.sin_addr), sizeof(ip)-1);
-                ip[sizeof(ip)-1] = '\0';
+                char lip[16]; int lport=ctx->gate.ip.port;
+                in_addr_t la = ip_of_if(ctx->gate.ifc);
+                strncpy(lip, inet_ntoa(*(struct in_addr*)&la), sizeof(lip)-1); lip[sizeof(lip)-1]='\0';
+                char rip[16]; strncpy(rip, inet_ntoa(from.sin_addr), sizeof(rip)-1); rip[sizeof(rip)-1]='\0';
                 int rport = ntohs(from.sin_port);
-                char msg[128];
-                snprintf(msg, sizeof(msg), "[%s][%s][%d][UDP]->[UART%d]",
-                         ifc_name(ctx->gate.ifc), ip, rport, u);
-                size_t msg_len = strlen(msg);
-                uint8_t *pay = malloc(4 + msg_len + 1);
-                if (pay) {
-                    pay[0]=0xFF; pay[1]='L'; pay[2]='O'; pay[3]='G';
-                    memcpy(pay+4, msg, msg_len+1);
-                    send_uart_ws_data(u, pay, 4 + msg_len + 1);
-                    free(pay);
-                }
+                char *data_str = bytes_to_hex_spaced(buf, n);
+                send_log_fmt(u, "[%s/SRV][LOCAL %s:%d]<-[PEER %s:%d][UDP]->[UART%d] %s",
+                             ifc_name(ctx->gate.ifc),
+                             lip, lport,
+                             rip, rport,
+                             u,
+                             data_str ? data_str : "");
+                if (data_str) free(data_str);
                 mon_tee_matching(ctx, buf, n);
             } else if (n<0) {
                 vTaskDelay(pdMS_TO_TICKS(5));
