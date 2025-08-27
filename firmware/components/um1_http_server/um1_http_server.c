@@ -1,4 +1,6 @@
 #include "um1_http_server.h"
+#include "um1_router.h"
+#include "esp_netif_ip_addr.h"
 
 #define MAX_SUBSCRIBERS 10
 #define UPLOAD_BUFFER_SIZE  1024
@@ -51,6 +53,13 @@ httpd_uri_t stream_status = {
     .uri      = "/api/stream_status",
     .method   = HTTP_GET,
     .handler  = stream_status_handler,
+    .user_ctx = NULL
+};
+
+httpd_uri_t netinfo = {
+    .uri      = "/api/netinfo",
+    .method   = HTTP_GET,
+    .handler  = netinfo_handler,
     .user_ctx = NULL
 };
 
@@ -180,6 +189,43 @@ esp_err_t system_info_handler(httpd_req_t *req)
     free(out);
     cJSON_Delete(root);
 
+    return ESP_OK;
+}
+
+static cJSON *netif_to_json(esp_netif_t *n) {
+    cJSON *o = cJSON_CreateObject();
+    if (!n) {
+        cJSON_AddBoolToObject(o, "up", false);
+        return o;
+    }
+    cJSON_AddBoolToObject(o, "up", esp_netif_is_netif_up(n));
+    uint8_t mac[6];
+    if (esp_netif_get_mac(n, mac) == ESP_OK) {
+        char mac_str[18];
+        snprintf(mac_str, sizeof(mac_str), "%02X:%02X:%02X:%02X:%02X:%02X",
+                 mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+        cJSON_AddStringToObject(o, "mac", mac_str);
+    }
+    esp_netif_ip_info_t ip;
+    if (esp_netif_get_ip_info(n, &ip) == ESP_OK) {
+        char ip_str[16];
+        esp_ip4addr_ntoa(&ip.ip, ip_str, sizeof(ip_str));
+        cJSON_AddStringToObject(o, "ip", ip_str);
+    }
+    return o;
+}
+
+esp_err_t netinfo_handler(httpd_req_t *req)
+{
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddItemToObject(root, "lan", netif_to_json(router_get_netif_lan()));
+    cJSON_AddItemToObject(root, "sta", netif_to_json(router_get_netif_sta()));
+    cJSON_AddItemToObject(root, "ap",  netif_to_json(router_get_netif_ap()));
+    char *out = cJSON_PrintUnformatted(root);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, out);
+    free(out);
+    cJSON_Delete(root);
     return ESP_OK;
 }
 
@@ -752,6 +798,7 @@ httpd_handle_t start_webserver(void)
         httpd_register_uri_handler(server, &logout);
         httpd_register_uri_handler(server, &change_password);
         httpd_register_uri_handler(server, &system_info);
+        httpd_register_uri_handler(server, &netinfo);
         httpd_register_uri_handler(server, &config_get_uri);
         httpd_register_uri_handler(server, &config_save);
         httpd_register_uri_handler(server, &stream_status);

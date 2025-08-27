@@ -2,6 +2,24 @@ const logDiv = document.getElementById("log");
 let ws;
 let pendingReboot = false;
 
+async function loadIfaces() {
+  try {
+    const resp = await fetch('/api/netinfo');
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    const box = document.getElementById('ifaces');
+    if (box) {
+      box.innerHTML = ['LAN','STA','AP'].map(name => {
+        const info = data[name.toLowerCase()];
+        if (!info || !info.up) return `<div>${name}: down</div>`;
+        return `<div>${name}: ${info.mac} ${info.ip}</div>`;
+      }).join('');
+    }
+  } catch (err) {
+    console.error('iface load error', err);
+  }
+}
+
 function start_socket() {
   ws = new WebSocket(`ws://${location.host}/ws`);
   ws.onopen = () => log("✅ Соединение открыто");
@@ -141,6 +159,7 @@ async function sendReboot() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  loadIfaces();
   if (!pendingReboot) start_socket();
 });
 
