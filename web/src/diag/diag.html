@@ -34,6 +34,10 @@
   <div class="container">
     <div id="notif" class="notification"></div>
     <div class="card">
+      <h3>Интерфейсы</h3>
+      <div id="ifaces"></div>
+    </div>
+    <div class="card">
       <div class="cmd-row">
         <input id="message" type="text" placeholder="Введите команду" pattern="[0-9A-Fa-f]*" oninput="this.value=this.value.replace(/[^0-9a-fA-F]/g,'')" />
         <button onclick="sendMessage()">Отправить</button>
