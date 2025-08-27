@@ -1,104 +1,115 @@
 {
-  "auth": {
-    "username": "admin",
-    "password": "admin"
-  },
-  "uart1": {
-    "baudrate": 115200,
-    "parity": "none",
-    "stop_bits": 1
-  },
-  "uart2": {
-    "baudrate": 9600,
-    "parity": "even",
-    "stop_bits": 1
-  },
-  "lan": {
-    "dhcp": true,
-    "static_ip": "192.168.0.100",
-    "subnet": "255.255.255.0",
-    "gateway": "192.168.0.1"
-  },
-  "wifi": {
-    "enabled": true,
-    "mode": "apsta",
-    "ap": {
-      "ssid": "MyAP",
-      "password": "ap_pass",
-      "authmode": "wpa2",
-      "dhcp": true,
-      "static_ip": "192.168.4.1",
-      "subnet": "255.255.255.0",
-      "gateway": "192.168.4.1"
-    },
-    "sta": {
-      "ssid": "MyNetwork",
-      "password": "MyPassword",
-      "authmode": "wpa2",
-      "dhcp": true,
-      "static_ip": "192.168.0.50",
-      "subnet": "255.255.255.0",
-      "gateway": "192.168.0.1"
-    }
-  },
-  "mqtt": {
-    "enabled": true,
-    "broker": "mqtt://uhcloud.ru",
-    "username": "igtrefilov",
-    "password": "estrella",
-    "tx_enabled": true,
-    "rx_enabled": false,
-    "topic": "uart/#"
-  },
-  "tcp": {
-    "enabled": true,
-    "server": "192.168.1.100",
-    "port": 1234,
-    "role": "client"
-  },
-  "udp": {
-    "enabled": false,
-    "server": "",
-    "port": 0,
-    "role": "client"
-  },
-  "sntp": {
-    "enabled": true,
-    "server_ip": "pool.ntp.org",
-    "sync_interval_sec": 3600
-  },
-  "ip_profile": {
-    "ip1": {
-      "client": true,
-      "address": "192.168.0.10",
-      "port": 1234,
-      "transport": "TCP"
-    },
-    "ip2": {
-      "client": false,
-      "address": "192.168.0.20",
-      "port": 5678,
-      "transport": "UDP"
-    }
-  },
-  "mqtt_profile": {
-    "mqtt1": {
-      "tx_topic": "uart/tx1",
-      "rx_topic": "uart/rx1"
-    },
-    "mqtt2": {
-      "tx_topic": "uart/tx2",
-      "rx_topic": "uart/rx2"
-    }
-  },
-  "routing": {
-    "gateway": {
-      "uart1": { "intf": "uart2", "profile": "ip1" },
-      "uart2": { "intf": "uart1", "profile": "ip1" }
-    },
-    "monitor": {
-      "uart1": { "intf": "lan", "profile": "ip1" },
-      "uart2": { "intf": "lan", "profile": "ip1" }
-    }
-  }
+	"auth":	{
+		"username":	"admin",
+		"password":	"admin"
+	},
+	"tcp":	{
+		"enabled":	true,
+		"server":	"192.168.1.100",
+		"port":	1234,
+		"role":	"server"
+	},
+	"udp":	{
+		"enabled":	false,
+		"server":	"",
+		"port":	0,
+		"role":	"server"
+	},
+	"routing":	{
+		"gateway":	{
+			"uart1":	{
+				"intf":	"lan",
+				"profile":	"ip1"
+			},
+			"uart2":	{
+				"intf":	"lan",
+				"profile":	"ip2"
+			}
+		},
+		"monitor":	{
+			"uart1":	{
+				"intf":	"lan",
+				"profile":	"mqtt1"
+			},
+			"uart2":	{
+				"intf":	"lan",
+				"profile":	"mqtt2"
+			}
+		}
+	},
+	"lan":	{
+		"dhcp":	true,
+		"static_ip":	"192.168.0.100",
+		"subnet":	"255.255.255.0",
+		"gateway":	"192.168.0.1"
+	},
+	"wifi":	{
+		"enabled":	false,
+		"mode":	"apsta",
+		"ap":	{
+			"ssid":	"MyAP",
+			"password":	"ap_pass",
+			"authmode":	"wpa2",
+			"dhcp":	true,
+			"static_ip":	"192.168.4.1",
+			"subnet":	"255.255.255.0",
+			"gateway":	"192.168.4.1"
+		},
+		"sta":	{
+			"ssid":	"MyNetwork",
+			"password":	"MyPassword",
+			"authmode":	"wpa2",
+			"dhcp":	true,
+			"static_ip":	"192.168.0.50",
+			"subnet":	"255.255.255.0",
+			"gateway":	"192.168.0.1"
+		}
+	},
+	"uart1":	{
+		"baudrate":	9600,
+		"parity":	"none",
+		"stop_bits":	1
+	},
+	"uart2":	{
+		"baudrate":	9600,
+		"parity":	"none",
+		"stop_bits":	1
+	},
+	"mqtt":	{
+		"enabled":	true,
+		"broker":	"mqtt://uhcloud.ru",
+		"username":	"igtrefilov",
+		"password":	"estrella"
+	},
+	"sntp":	{
+		"enabled":	true,
+		"server_ip":	"pool.ntp.org",
+		"sync_interval_sec":	3600
+	},
+	"ip_profile":	{
+		"ip1":	{
+			"client":	false,
+			"ip":	"192.168.0.100",
+			"address":	"192.168.0.100",
+			"port":	1234,
+			"transport":	"TCP"
+		},
+		"ip2":	{
+			"client":	false,
+			"ip":	"192.168.0.20",
+			"address":	"192.168.0.20",
+			"port":	5678,
+			"transport":	"UDP"
+		}
+	},
+	"mqtt_profile":	{
+		"mqtt1":	{
+			"tx_topic":	"uart/tx1",
+			"rx_topic":	"uart/rx1"
+		},
+		"mqtt2":	{
+			"tx_topic":	"uart/tx2",
+			"rx_topic":	"uart/rx2"
+		}
+	}
 }

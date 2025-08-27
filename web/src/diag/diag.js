@@ -144,3 +144,8 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!pendingReboot) start_socket();
 });
 
+function clearLog() {
+  logDiv.innerHTML = "";
+}
+
+
