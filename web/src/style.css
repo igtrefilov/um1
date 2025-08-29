@@ -452,3 +452,56 @@ body.fullscreen-center {
   border-bottom: 1px solid var(--border);
 }
 
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  font-size: 14px;
+}
+
+.iface-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.iface-card h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.iface-card table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.iface-card td {
+  padding: 2px 0;
+}
+
+.diag-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.diag-main .card {
+  flex: 1;
+  min-width: 280px;
+}
+
+.log-card {
+  height: 300px;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
