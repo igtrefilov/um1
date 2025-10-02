@@ -107,6 +107,19 @@ header {
   gap: 10px;
 }
 
+.logo {
+  height: 36px;
+  width: auto;
+}
+
+header .logo {
+  flex-shrink: 0;
+}
+
+.logo-centered {
+  display: block;
+  margin: 0 auto 16px;
+}
 header h1 {
   font-size: 18px;
   margin: 0;
