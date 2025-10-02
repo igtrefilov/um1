@@ -1,0 +1,10 @@
+diff --git a/web/src/settings/settings.html b/web/src/settings/settings.html
+--- a/web/src/settings/settings.html
++++ b/web/src/settings/settings.html
+@@ -393,6 +393,7 @@
+   <script src="/app.js"></script>
+   <script src="/settings/settings.js"></script>
++  тестовая запись
+ </body>
+ </html>
+ 
